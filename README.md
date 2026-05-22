@@ -10,7 +10,7 @@ PwnNet is a straightforward networking and diagnostics app designed to make expl
 *   **📡 Logs:** Keeps track of the commands you've run and their outputs so you can review them later.
 *   **📚 Resources:** Includes handy reference guides for things like common ports, the OSI model, and Nmap commands.
 
-## Mobile App (Android)
+## Mobile App (Android) *COMING SOON!
 
 Get the PwnNet app on your phone:
 
