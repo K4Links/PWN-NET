@@ -40,7 +40,9 @@ npm run dev
 # Open the app
 o + ENTER
 ```
-Please 🌟 if you find this project helpful.
+---
+**Please 🌟 if you find this project helpful.**
+
 Donations are always welcome and appreciated! Thanks!
 
 **BTC:**
