@@ -95,8 +95,7 @@ Bitcoin (BTC):
 bc1qqh84tnwrkm2sn2wg8r8tzt7sljee6q0km8a5wt
 ```
 
-### License
-This project is open source and available under the MIT License (LICENSE). Made for learning and exploration
+---
 
 ### Important
 
@@ -105,3 +104,8 @@ Misuse may violate laws and terms of service.
 
 — Enjoy responsibly! Feel free to open issues or submit pull requests. Contributions are welcome!
 
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
