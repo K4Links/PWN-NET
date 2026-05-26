@@ -43,7 +43,7 @@
 
 ---
 
-## 🚀 Running Locally
+## 🚀 Running Locally (On PC)
 
 ```bash
 # 1. Clone the repository
