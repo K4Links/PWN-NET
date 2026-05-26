@@ -38,7 +38,7 @@ npm install
 npm run dev
 
 # Open the app
-o + ENTER
+o + ENTER or click the URL that is displayed in Terminal.(e.g.http://0.0.0.0:3000)
 ```
 ---
 ### Please 🌟 if you find this project helpful.
