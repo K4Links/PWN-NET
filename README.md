@@ -90,8 +90,8 @@ Click the URL shown in the terminal (usually http://localhost:5173 or http://0.0
 If you find **PWNNET** useful, please consider giving the project a **star** ⭐ — it helps a lot!
 
 **Donations (optional but greatly appreciated):**
-Bitcoin (BTC):
 
+**Bitcoin:(BTC)**
 ```
 bc1qqh84tnwrkm2sn2wg8r8tzt7sljee6q0km8a5wt
 ```
@@ -99,8 +99,7 @@ bc1qqh84tnwrkm2sn2wg8r8tzt7sljee6q0km8a5wt
 
 ### Important
 
-This tool is for educational and authorized use only. Only use on networks and systems you own or have explicit permission to test.
-Misuse may violate laws and terms of service.
+This tool is for educational and authorized use. Only use on networks and systems you own or have explicit permission to test.
 
 — Enjoy responsibly! Feel free to open issues or submit pull requests. Contributions are welcome!
 
