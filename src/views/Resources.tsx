@@ -455,7 +455,7 @@ export function Resources() {
                       </div>
                       <div className="sm:col-span-6 flex flex-col sm:block overflow-x-auto sm:overflow-visible pb-1 sm:pb-0">
                          <span className="sm:hidden text-teal-500/50 text-[8px] tracking-widest uppercase mt-1 mb-0.5">{activeRes.content.columns[1]}</span>
-                         <span className="text-teal-400/80 sm:break-all whitespace-pre sm:whitespace-normal">{row[1]}</span>
+                         <span className="text-teal-400/80 break-all sm:break-words whitespace-normal">{row[1]}</span>
                       </div>
                       <div className="sm:col-span-3 flex flex-col sm:block">
                          <span className="sm:hidden text-teal-500/50 text-[8px] tracking-widest uppercase mt-1 mb-0.5">{activeRes.content.columns[2]}</span>

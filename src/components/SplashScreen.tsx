@@ -77,7 +77,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           />
           <div 
-            className={`w-full aspect-square relative z-10 drop-shadow-2xl transition-all duration-300 mix-blend-screen contrast-125 brightness-150 ${isGlitching ? 'glitch-logo' : ''}`}
+            className={`w-full aspect-square relative z-10 drop-shadow-2xl transition-all duration-300 contrast-125 brightness-150 ${isGlitching ? 'glitch-logo' : ''}`}
             style={{ backgroundImage: 'url(https://i.postimg.cc/sQ6vLRrd/Screenshot-20260527-095019-Bazaart.jpg)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
           >
           </div>

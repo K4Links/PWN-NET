@@ -1378,15 +1378,15 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                 >
                   <Copy className="mx-auto" size={14} />
                 </button>
-                <button
-                  onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(`https://www.google.com/search?q=${encodeURIComponent(editableDork)}`, '_blank', 'noopener,noreferrer');
-                  }}
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(editableDork)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="border flex-1 flex flex-col justify-center border-neon-green bg-neon-green/15 hover:bg-neon-green/35 text-neon-green hover:text-white px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-widest text-center transition-all font-bold active:scale-95 shadow-md shadow-neon-green/5 cursor-pointer leading-tight"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   LAUNCH SEARCH
-                </button>
+                </a>
               </div>
             </div>
           </div>
