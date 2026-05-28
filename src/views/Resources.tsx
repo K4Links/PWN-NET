@@ -437,20 +437,30 @@ export function Resources() {
 
               {/* Data Table */}
               <div className="flex-1 overflow-hidden flex flex-col bg-black border border-border-gray text-[10px] sm:text-xs rounded-xl">
-                {/* Columns Header */}
-                <div className="grid grid-cols-12 bg-[#090909] border-b border-border-gray font-bold p-2 text-teal-400 shrink-0">
+                {/* Columns Header - Hidden on mobile */}
+                <div className="hidden sm:grid grid-cols-12 gap-2 bg-[#090909] border-b border-border-gray font-bold p-2 text-teal-400 shrink-0">
                   <span className="col-span-3 truncate">{activeRes.content.columns[0]}</span>
-                  <span className="col-span-3 truncate">{activeRes.content.columns[1]}</span>
-                  <span className="col-span-6 truncate">{activeRes.content.columns[2]}</span>
+                  <span className="col-span-6 truncate">{activeRes.content.columns[1]}</span>
+                  <span className="col-span-3 truncate">{activeRes.content.columns[2]}</span>
                 </div>
 
                 {/* Rows List */}
                 <div className="flex-1 overflow-y-auto divide-y divide-border-gray/30">
                   {activeRes.content.rows.map((row, idx) => (
-                    <div key={idx} className="grid grid-cols-12 p-2 hover:bg-[#070707] transition-colors leading-relaxed font-mono">
-                      <span className="col-span-3 text-white font-bold">{row[0]}</span>
-                      <span className="col-span-3 text-teal-400/80">{row[1]}</span>
-                      <span className="col-span-6 text-gray-300">{row[2]}</span>
+                    <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-1 sm:gap-2 p-3 sm:p-2 hover:bg-[#070707] transition-colors leading-relaxed font-mono">
+                      {/* Mobile Label + Value rendering */}
+                      <div className="sm:col-span-3 flex flex-col sm:block">
+                         <span className="sm:hidden text-teal-500/50 text-[8px] tracking-widest uppercase mb-0.5">{activeRes.content.columns[0]}</span>
+                         <span className="text-white font-bold break-words">{row[0]}</span>
+                      </div>
+                      <div className="sm:col-span-6 flex flex-col sm:block overflow-x-auto sm:overflow-visible pb-1 sm:pb-0">
+                         <span className="sm:hidden text-teal-500/50 text-[8px] tracking-widest uppercase mt-1 mb-0.5">{activeRes.content.columns[1]}</span>
+                         <span className="text-teal-400/80 sm:break-all whitespace-pre sm:whitespace-normal">{row[1]}</span>
+                      </div>
+                      <div className="sm:col-span-3 flex flex-col sm:block">
+                         <span className="sm:hidden text-teal-500/50 text-[8px] tracking-widest uppercase mt-1 mb-0.5">{activeRes.content.columns[2]}</span>
+                         <span className="text-gray-300 break-words">{row[2]}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

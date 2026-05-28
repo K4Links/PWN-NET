@@ -581,6 +581,147 @@ app.get('/api/net/dirscan', async (req, res) => {
   }
 });
 
+// 12. Admin Finder
+app.get('/api/net/adminfinder', async (req, res) => {
+  const { target } = req.query;
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target is required' });
+  const dirs = ['admin', 'login', 'admin/login.php', 'administrator', 'wp-admin', 'cpanel', 'config', 'dashboard'];
+  
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'http://' + baseUrl;
+
+  const results = [];
+  try {
+     for (const dir of dirs) {
+       try {
+         const controller = new AbortController();
+         const timeoutId = setTimeout(() => controller.abort(), 2000);
+         const resNode = await fetch(`${baseUrl}/${dir}`, { method: 'HEAD', redirect: 'manual', signal: controller.signal });
+         clearTimeout(timeoutId);
+         if (resNode.status !== 404 && resNode.status !== 0) {
+            results.push({ path: `/${dir}`, status: resNode.status });
+         }
+       } catch (err) {}
+     }
+     res.json({ results });
+  } catch(e) {
+     res.status(500).json({ error: 'Scan failed' });
+  }
+});
+
+// 13. React/Next Scanner
+app.get('/api/net/reactscan', async (req, res) => {
+  const { target } = req.query;
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target is required' });
+  const dirs = ['_next/static/development', '_next/data', 'api/health', 'robots.txt'];
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'http://' + baseUrl;
+
+  const results = [];
+  try {
+     for (const dir of dirs) {
+       try {
+         const controller = new AbortController();
+         const timeoutId = setTimeout(() => controller.abort(), 2000);
+         const resNode = await fetch(`${baseUrl}/${dir}`, { method: 'HEAD', redirect: 'manual', signal: controller.signal });
+         clearTimeout(timeoutId);
+         if (resNode.status !== 404 && resNode.status !== 0) {
+            results.push({ path: `/${dir}`, status: resNode.status });
+         }
+       } catch (err) {}
+     }
+     res.json({ results });
+  } catch(e) {
+     res.status(500).json({ error: 'Scan failed' });
+  }
+});
+
+// 14. Phone Crawler
+app.get('/api/net/phonecrawl', async (req, res) => {
+  const { target } = req.query;
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target is required' });
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'http://' + baseUrl;
+
+  try {
+     const controller = new AbortController();
+     const timeoutId = setTimeout(() => controller.abort(), 5000);
+     const response = await fetch(baseUrl, { signal: controller.signal });
+     clearTimeout(timeoutId);
+     const text = await response.text();
+     const phoneRegex = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+     const matches = text.match(phoneRegex) || [];
+     const uniqueMatches = [...new Set(matches.map(m => m.trim()))].filter(m => m.length >= 10);
+     res.json({ count: uniqueMatches.length, numbers: uniqueMatches });
+  } catch(e) {
+     res.status(500).json({ error: 'Crawler failed to fetch target' });
+  }
+});
+
+// 15. DoS (Stress test limited to small burst for safety)
+app.get('/api/net/dos', async (req, res) => {
+  const { target } = req.query;
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target is required' });
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'http://' + baseUrl;
+
+  // We limit the DOS to max 100 requests to avoid real abuse
+  try {
+    const promises = Array.from({length: 100}).map((_, i) => {
+       const controller = new AbortController();
+       const timeoutId = setTimeout(() => controller.abort(), 3000);
+       return fetch(`${baseUrl}?st=${Date.now()}${i}`, { mode: 'no-cors', cache: 'no-store', signal: controller.signal })
+              .catch(e => null) // Suppress errors
+              .finally(() => clearTimeout(timeoutId));
+    });
+    // Don't wait for all of them to finish completely or it could take a while
+    // Just fire and forget some, wait for some
+    await Promise.all(promises.slice(0, 20));
+    res.json({ message: 'Stress test burst completed (100 packets)' });
+  } catch(e) {
+    res.status(500).json({ error: 'Failed to complete stress burst' });
+  }
+});
+
+// 16. Web Faker
+app.get('/api/net/webfaker', async (req, res) => {
+  const { target } = req.query;
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target is required' });
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'http://' + baseUrl;
+
+  try {
+     const controller = new AbortController();
+     const timeoutId = setTimeout(() => controller.abort(), 5000);
+     const response = await fetch(baseUrl, { signal: controller.signal });
+     clearTimeout(timeoutId);
+     const html = await response.text();
+     res.json({ content: html.substring(0, 1500) + '\\n\\n...[SOURCE TRUNCATED FOR DISPLAY]...' });
+  } catch(e) {
+     res.status(500).json({ error: 'Failed to fetch source' });
+  }
+});
+
+// 17. WP Scanner
+app.get('/api/net/wpscan', async (req, res) => {
+  const { target } = req.query;
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target is required' });
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'http://' + baseUrl;
+
+  try {
+     const controller = new AbortController();
+     const timeoutId = setTimeout(() => controller.abort(), 5000);
+     const response = await fetch(baseUrl, { signal: controller.signal });
+     clearTimeout(timeoutId);
+     const text = await response.text();
+     const isWp = text.toLowerCase().includes('wp-content') || text.toLowerCase().includes('wp-includes');
+     res.json({ isWordPress: isWp, headers: Object.fromEntries(response.headers.entries()) });
+  } catch(e) {
+     res.status(500).json({ error: 'WP scan fetch failed' });
+  }
+});
+
 // --- VITE DEV SERVER OR PROD STATIC ---
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

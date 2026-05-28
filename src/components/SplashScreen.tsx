@@ -55,38 +55,31 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
 
       <div className="z-10 flex flex-col items-center w-full max-w-md px-6">
         <motion.div 
-          className="relative mb-6 w-full max-w-[400px]"
+          className="relative mb-6 w-full max-w-[200px]"
           initial={{ scale: 0.95, opacity: 0, filter: "blur(8px)" }}
           animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
           transition={{ duration: 1.2, ease: "easeOut" }}
         >
           <motion.div 
-            className={`absolute inset-0 ${isGlitching ? 'bg-[#00FF41]/20' : 'bg-[#00FF41]/40'} blur-[60px] rounded-full transition-colors duration-1000`}
+            className="absolute inset-[10%] -z-10 bg-black rounded-full blur-[15px]" 
+          />
+          <motion.div 
+            className="absolute -inset-[60%] -z-20 origin-center"
+            style={{
+               background: isGlitching 
+                 ? 'radial-gradient(circle, transparent 25%, rgba(0, 255, 65, 0.15) 50%, transparent 70%)'
+                 : 'radial-gradient(circle, transparent 25%, rgba(0, 255, 65, 0.35) 50%, transparent 70%)'
+            }}
             animate={{ 
               opacity: [0.6, 1, 0.6],
-              scale: [1.1, 1.4, 1.1] 
+              scale: [1, 1.15, 1] 
             }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           />
-          <motion.div 
-            className={`absolute inset-4 ${isGlitching ? 'bg-[#38bdf8]/30' : 'bg-[#00FF41]/30'} blur-[30px] rounded-full transition-colors duration-1000`}
-            animate={{ 
-              opacity: [0.5, 1, 0.5],
-              scale: [0.9, 1.1, 0.9] 
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-          />
           <div 
-            className="w-full h-auto relative z-10 drop-shadow-2xl glitch-container transition-all duration-300 mix-blend-screen contrast-125"
-            style={{ backgroundImage: 'url(https://i.postimg.cc/Y9wL20Xk/PWN-logo.png)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', minHeight: '150px' }}
+            className={`w-full aspect-square relative z-10 drop-shadow-2xl transition-all duration-300 mix-blend-screen contrast-125 brightness-150 ${isGlitching ? 'glitch-logo' : ''}`}
+            style={{ backgroundImage: 'url(https://i.postimg.cc/sQ6vLRrd/Screenshot-20260527-095019-Bazaart.jpg)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
           >
-             <div className={`w-full h-full absolute inset-0 transition-opacity duration-300 ${isGlitching ? 'glitch-logo opacity-100' : 'opacity-0'}`} style={{ backgroundImage: 'url(https://i.postimg.cc/Y9wL20Xk/PWN-logo.png)' }}></div>
-             <img 
-               src="https://i.postimg.cc/Y9wL20Xk/PWN-logo.png" 
-               alt="PWNNET"
-               className="w-full h-auto object-contain opacity-0"
-               referrerPolicy="no-referrer"
-             />
           </div>
         </motion.div>
 

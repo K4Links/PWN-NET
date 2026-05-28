@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Cpu, TerminalSquare, Compass, Shield, Activity, Sun, Moon } from 'lucide-react';
+import { Cpu, TerminalSquare, Compass, Shield, Activity, Sun, Moon, Info } from 'lucide-react';
 
 interface TopBarProps {
   title: string;
   onTerminalToggle?: () => void;
+  onAboutClick?: () => void;
 }
 
-export function TopBar({ title }: TopBarProps) {
+export function TopBar({ title, onAboutClick }: TopBarProps) {
   const [isLight, setIsLight] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('theme') === 'light';
@@ -35,9 +36,9 @@ export function TopBar({ title }: TopBarProps) {
 
       <div className="text-xs font-mono tracking-widest uppercase flex items-center gap-3 relative z-0">
         <img 
-          src="https://i.postimg.cc/Y9wL20Xk/PWN-logo.png" 
+          src="https://i.postimg.cc/sQ6vLRrd/Screenshot-20260527-095019-Bazaart.jpg" 
           alt="PWN//NET" 
-          className="h-[77px] -mt-1 -mb-4 w-auto object-contain hover:scale-105 transition-all duration-300 opacity-90 relative mix-blend-screen contrast-125" 
+          className="h-[48px] w-auto object-contain hover:scale-105 transition-all duration-300 opacity-90 mix-blend-screen contrast-125" 
           referrerPolicy="no-referrer" 
         />
         {title.toLowerCase() !== 'pwnnet tools' && (
@@ -53,6 +54,18 @@ export function TopBar({ title }: TopBarProps) {
           <Shield size={10} className="text-neon-green" />
           <span>SHIELD: <span className="text-[#38bdf8] font-bold">ACTIVE</span></span>
         </div>
+
+        {/* About Button */}
+        {onAboutClick && (
+          <button
+            onClick={onAboutClick}
+            className="bg-black hover:bg-neon-green/10 border border-neon-green/40 hover:border-neon-green px-2.5 py-1 rounded-xl text-neon-green hover:text-white transition-all cursor-pointer active:scale-95 flex items-center gap-1 font-bold text-[9px] tracking-wider"
+            title="About Information"
+          >
+            <Info size={11} className="stroke-[2.5px] text-blue-400" />
+            <span>ABOUT</span>
+          </button>
+        )}
 
         {/* Theme Toggle Button */}
         <button

@@ -8,11 +8,13 @@ import { Logbook } from './views/Logbook';
 import { Resources } from './views/Resources';
 import { Settings } from './views/Settings';
 import { SplashScreen } from './components/SplashScreen';
+import { AboutModal } from './components/AboutModal';
 import { AnimatePresence } from 'motion/react';
 import { initKotlinLogger } from './utils/kotlinLogger';
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
+  const [showAbout, setShowAbout] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('tools');
   const [activeTool, setActiveTool] = useState<ToolDef | null>(null);
 
@@ -62,6 +64,7 @@ export default function App() {
         <TopBar 
           title={getTitle()} 
           onTerminalToggle={activeTab === 'tools' ? () => setActiveTool(activeTool) : undefined} 
+          onAboutClick={() => setShowAbout(true)}
         />
       
       <div className="flex-1 relative overflow-hidden flex flex-col">
@@ -77,6 +80,8 @@ export default function App() {
           />
         )}
       </div>
+
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
 
       <div className="shrink-0 z-50 relative bg-obsidian">
         <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} disabled={!!activeTool} />

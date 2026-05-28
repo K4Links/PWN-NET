@@ -40,9 +40,23 @@ export function ToolsGrid({ onSelectTool }: ToolsGridProps) {
 
   // Filtered tools
   const filteredTools = useMemo(() => {
-    return TOOLS.filter((tool) => {
+    const list = TOOLS.filter((tool) => {
       return selectedCategory === 'All' || tool.category === selectedCategory;
     });
+
+    if (selectedCategory === 'All') {
+       list.sort((a, b) => {
+          if (a.id === 'pwnux') return -1;
+          if (b.id === 'pwnux') return 1;
+          
+          if (a.category < b.category) return -1;
+          if (a.category > b.category) return 1;
+          
+          return 0;
+       });
+    }
+
+    return list;
   }, [selectedCategory]);
 
   return (

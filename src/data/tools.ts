@@ -50,7 +50,14 @@ import {
   DoorOpen,
   Dna,
   Send,
-  HardDrive
+  HardDrive,
+  FileSearch,
+  Code,
+  Phone,
+  Bomb,
+  FileText,
+  AppWindow,
+  Hammer
 } from 'lucide-react';
 import { ToolDef } from '../types';
 
@@ -90,6 +97,16 @@ export const TOOLS: ToolDef[] = [
   { id: 'qr_gen', name: 'Barcode/QR Creator', icon: QrCode, category: 'Utils', actionType: 'modal', description: 'Generates high-resolution Quick Response (QR) matrices and barcodes from strings, links, or contact data.' },
   { id: 'otp', name: 'OTP Decoder', icon: Timer, category: 'Utils', actionType: 'modal', description: 'Analyzes Two-Factor Authentication secrets or parameters. Currently a diagnostic utility for checking standard TOTP/HOTP cryptographic lengths.' },
   { id: 'passwords', name: 'Passwords', icon: RectangleEllipsis, category: 'Utils', actionType: 'modal', description: 'Generates cryptographically secure, high-entropy passwords with customizable constraints and evaluates password entropy via brute-force matrices.' },
+  { id: 'admin_finder', name: 'Admin Finder', icon: ShieldCheck, category: 'Web', actionType: 'terminal', requiresInput: true, description: 'Attempts to locate the administration portal of a target website by scanning common login endpoints.' },
+  { id: 'wp_scan', name: 'WP Scanner', icon: FileSearch, category: 'Web', actionType: 'terminal', requiresInput: true, description: 'Checks responses, headers, and plugins utilized by the target to identify potential WordPress CVE vulnerabilities.' },
+  { id: 'cve', name: 'CVE Database', icon: Bug, category: 'Recon', actionType: 'terminal', requiresInput: true, description: 'Queries the Common Vulnerabilities and Exposures (CVE) database for comprehensive historical data on specific cybersecurity vulnerabilities.' },
+  { id: 'react_scan', name: 'React/Next Scanner', icon: Code, category: 'Web', actionType: 'terminal', requiresInput: true, description: 'Scans React and Next.js applications for exposed endpoints, misconfigured source maps, and debugging components.' },
+  { id: 'notes', name: 'Notes', icon: FileText, category: 'Utils', actionType: 'modal', description: 'Local storage vault for aggregating output, payloads, or links collected during your pentesting pipeline. Stores securely on-dev.' },
+  { id: 'browser', name: 'Browser', icon: AppWindow, category: 'Utils', actionType: 'modal', description: 'A compartmentalized browser frame for safely checking web pages directly within the PWNNET environment.' },
+  { id: 'hackbar', name: 'Advanced Hackbar', icon: Hammer, category: 'Web', actionType: 'modal', description: 'Advanced payload studio. Generate and format XSS, SQLi, and WAF bypass vectors directly into your pentesting workflow.' },
+  { id: 'phone_crawl', name: 'Phone Crawler', icon: Phone, category: 'Recon', actionType: 'terminal', requiresInput: true, description: 'Scans an input target or page and utilizes regex patterns to extract matching phone number metadata.' },
+  { id: 'stress_test', name: 'DoS / Stress Tester', icon: Bomb, category: 'Web', actionType: 'terminal', requiresInput: true, description: 'Test target infrastructure by performing a simulated HTTP denial-of-service stress test to gauge capability.' },
+  { id: 'web_faker', name: 'Web Faker', icon: Globe, category: 'Web', actionType: 'terminal', requiresInput: true, description: 'Clones web markup and assets to assess target scraping or to execute response validation testing.' }
 ];
 
 

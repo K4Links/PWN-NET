@@ -1,8 +1,8 @@
 # PWNNET-Toolkit
 
-**PWNNET** is a powerful, easy-to-use networking and diagnostics toolkit designed for students, security enthusiasts, and professionals. It provides **30+ practical tools** for network exploration, diagnostics, web reconnaissance, and security testing — all in a clean, responsive interface.
-
 ![PWNNET Banner](https://i.postimg.cc/GpQF5V7m/homescreen-PWNNET.png)
+
+**PWNNET** is a powerful, easy-to-use networking and diagnostics toolkit designed for students, security enthusiasts, and professionals. It provides **30+ practical tools** for network exploration, diagnostics, web reconnaissance, and security testing — all in a clean, responsive interface.
 
 **Available on Web + Android APK**
 
@@ -10,11 +10,15 @@
 
 ## ✨ Core Features
 
-- **⚡ Tools Grid** — 30+ ready-to-use tools including:
+- **⚡ Tools Grid** — 43 ready-to-use tools including:
+  - Web Crawler
+  - WordPress Scanner
+  - Admin Finder
+  - Have I Been Pwned
+  - Phone Crawler
   - Ping & Ping Sweep
   - Port Scanning
   - SSH Connection Tester
-  - Web Crawler
   - DNS Lookup
   - WHOIS
   - SSL Certificate Info
@@ -34,8 +38,6 @@
 ---
 
 ### 📱 Mobile App (Android)
-  
-<a href='https://postimg.cc/xXYHVXnV' target='_blank'><img src='https://i.postimg.cc/xXYHVXnV/Screenshot-20260527-062339-Bazaart.jpg' border='0' alt='Screenshot-20260527-062339-Bazaart'></a> <a href='https://postimg.cc/5YcQpyP0' target='_blank'><img src='https://i.postimg.cc/5YcQpyP0/Screenshot-20260527-065254.jpg' border='0' alt='Screenshot-20260527-065254'></a>
 
 1. Download the latest **`.apk`** from the [Releases](https://github.com/K4Links/PWNNET-Toolkit/releases) page.
 2. Enable **"Install from Unknown Sources"** in your Android security settings.
@@ -60,9 +62,7 @@ npm install
 # 4. Start the development server
 npm run dev
 ```
-
-**Open app**
-
+To open app:
 
 Click the URL shown in the terminal (usually http://localhost:5173 or http://0.0.0.0:5173).
 

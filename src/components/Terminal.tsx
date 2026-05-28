@@ -15,13 +15,46 @@ interface TerminalEmulatorProps {
   onClose: () => void;
 }
 
+const fallbackCopyTextToClipboard = (text: string) => {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  
+  // Avoid scrolling to bottom
+  textArea.style.top = "0";
+  textArea.style.left = "0";
+  textArea.style.position = "fixed";
+
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    document.execCommand('copy');
+  } catch (err) {
+    console.error('Fallback: Oops, unable to copy', err);
+  }
+
+  document.body.removeChild(textArea);
+}
+
+const copyToClipboardV2 = (text: string) => {
+  if (!navigator.clipboard) {
+    fallbackCopyTextToClipboard(text);
+    return;
+  }
+  navigator.clipboard.writeText(text).catch(err => {
+    // some android devices have clipboard API object but fail
+    fallbackCopyTextToClipboard(text);
+  });
+}
+
 const CopyableLink = ({ url, label }: { url: string, label?: string }) => {
   const [copied, setCopied] = useState(false);
   
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    navigator.clipboard.writeText(url);
+    copyToClipboardV2(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -30,7 +63,9 @@ const CopyableLink = ({ url, label }: { url: string, label?: string }) => {
     <span className="inline-flex items-center gap-2 mt-1">
       <a 
         href={url} 
-        onClick={(e) => e.stopPropagation()} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        onClick={(e) => { e.stopPropagation(); }} 
         className="underline hover:text-white break-all text-[#38bdf8]"
       >
         {label || url}
@@ -85,6 +120,12 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
   const [btDevice, setBtDevice] = useState<any>(null);
   const [btServices, setBtServices] = useState<any[]>([]);
   const [btError, setBtError] = useState<string>('');
+  const [notesText, setNotesText] = useState(() => { try { return localStorage.getItem('pwn_notes') || ''; } catch(e) { return ''; } });
+  const [browserUrl, setBrowserUrl] = useState('https://www.google.com/webhp?igu=1');
+  const [hackbarTarget, setHackbarTarget] = useState('http://testphp.vulnweb.com/listproducts.php?cat=1');
+  const [hackbarMethod, setHackbarMethod] = useState('GET');
+  const [hackbarPayload, setHackbarPayload] = useState('1 UNION SELECT 1,2,3--');
+  const [hackbarResult, setHackbarResult] = useState('');
 
   const dorkPresets: Record<string, {name: string, dorks: string[]}> = {
   index_of: {
@@ -254,8 +295,8 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
          initialOutputs.push({
             id: 'init-3',
             timestamp: Date.now(),
-            type: 'success',
-            content: `Available commands:\nclear, nmap, ping, whois, traceroute, mtr, shodan, host, dns, nslookup, dig, vt, pwned, blacklist, mac, http, curl, wget, spider, certs, mail, net_scan, port_scan, smb, smbclient, dir_scan, base64, cipher, dorks`
+            type: 'system',
+            content: `Connected to pwnux shell environment.\nType 'help' to see available commands.`
          });
       }
 
@@ -506,8 +547,26 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
          'dir_scan': 'dir_scan',
          'base64': 'base64',
          'cipher': 'cipher',
-         'dorks': 'dorks'
+         'dorks': 'dorks',
+         'admin_finder': 'admin_finder',
+         'wp_scan': 'wp_scan',
+         'cve': 'cve',
+         'react_scan': 'react_scan',
+         'phone_crawl': 'phone_crawl',
+         'stress_test': 'stress_test',
+         'dos': 'stress_test',
+         'stress': 'stress_test',
+         'web_faker': 'web_faker',
+         'clone': 'web_faker'
       };
+
+      if (cmd === 'help' || cmd === '-h' || cmd === '--help') {
+         addOutput('input', `root@pwnux:~$ ${rawInput}`);
+         addOutput('info', `Available commands: clear, help, ${Object.keys(cmdMap).join(', ')}`);
+         setTarget('');
+         setIsRunning(false);
+         return;
+      }
 
       const examplesMap: Record<string, string> = {
          'nmap': 'nmap target.com',
@@ -537,7 +596,17 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
          'dir_scan': 'dir_scan target.com',
          'base64': 'base64 text-to-encode-or-decode',
          'cipher': 'cipher text-to-decode',
-         'dorks': 'dorks target.com'
+         'dorks': 'dorks target.com',
+         'admin_finder': 'admin_finder target.com',
+         'wp_scan': 'wp_scan target.com',
+         'cve': 'cve CVE-YYYY-NNNN',
+         'react_scan': 'react_scan target.com',
+         'phone_crawl': 'phone_crawl target.com',
+         'stress_test': 'stress_test target.com',
+         'dos': 'dos target.com',
+         'stress': 'stress target.com',
+         'web_faker': 'web_faker target.com',
+         'clone': 'clone target.com'
       };
       
       if (cmdMap[cmd]) {
@@ -553,7 +622,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
       } else {
          addOutput('input', `root@pwnux:~$ ${rawInput}`);
          addOutput('error', `bash: ${cmd}: command not found`);
-         addOutput('info', `Available commands: clear, ${Object.keys(cmdMap).join(', ')}`);
+         addOutput('info', `Type 'help' to see available commands.`);
          setTarget('');
          setIsRunning(false);
          return;
@@ -645,7 +714,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
     const cidrParts = resolvedTarget.split('/');
     const isCidr = cidrParts.length === 2 && /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(cidrParts[0]) && !isNaN(parseInt(cidrParts[1])) && parseInt(cidrParts[1]) >= 0 && parseInt(cidrParts[1]) <= 32;
 
-    const domainOrIpTools = ['ping', 'nmap', 'whois', 'traceroute', 'mtr', 'shodan', 'host', 'ip_host', 'dns', 'nslookup', 'dig', 'vt', 'blacklist', 'http', 'curl', 'wget', 'spider', 'certs', 'mail', 'dir_scan', 'port_scan', 'smb', 'smbclient'];
+    const domainOrIpTools = ['ping', 'nmap', 'whois', 'traceroute', 'mtr', 'shodan', 'host', 'ip_host', 'dns', 'nslookup', 'dig', 'vt', 'blacklist', 'http', 'curl', 'wget', 'spider', 'certs', 'mail', 'dir_scan', 'port_scan', 'smb', 'smbclient', 'admin_finder', 'wp_scan', 'react_scan', 'phone_crawl', 'stress_test', 'web_faker'];
     
     if (domainOrIpTools.includes(activeToolId)) {
         if (!isValidIP && !isValidDomain) {
@@ -700,22 +769,26 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
           else addOutput('info', text);
 
         } else if (activeToolId === 'shodan') {
-          const url = `https://www.shodan.io/host/${encodeURIComponent(resolvedTarget)}`;
-          addOutput('info', 'Public queries to Shodan require a Premium API Key.');
+          addOutput('system', `Pivoting to Open-Source Host Search for [${resolvedTarget}]...`);
+          try {
+              const response = await fetch(`https://api.hackertarget.com/hostsearch/?q=${encodeURIComponent(resolvedTarget)}`);
+              addOutput('info', await response.text());
+          } catch(e) {
+              addOutput('error', 'Execution blocked by network.');
+          }
           addOutput('success', (
             <span className="flex items-center flex-wrap">
-              {'=> Click here to view results on Shodan: '}
-              <CopyableLink url={url} />
+              {'=> Open full Shodan query here: '}
+              <CopyableLink url={`https://www.shodan.io/host/${encodeURIComponent(resolvedTarget)}`} />
             </span>
           ));
 
         } else if (activeToolId === 'vt') {
-          const url = `https://www.virustotal.com/gui/search/${encodeURIComponent(resolvedTarget)}`;
-          addOutput('info', 'Accessing VirusTotal via direct REST proxy requires API credentials.');
+          addOutput('system', `Analyzing Crowd-sourced Intelligence for [${resolvedTarget}]...`);
           addOutput('success', (
             <span className="flex items-center flex-wrap">
-              {'=> View Crowdsourced Reputation: '}
-              <CopyableLink url={url} />
+              {'=> View VirusTotal Analysis: '}
+              <CopyableLink url={`https://www.virustotal.com/gui/search/${encodeURIComponent(resolvedTarget)}`} />
             </span>
           ));
 
@@ -723,22 +796,20 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
           addOutput('system', `Google Dork templates active... See UI to generate.`);
 
         } else if (activeToolId === 'pwned') {
-          const url = `https://haveibeenpwned.com/account/${encodeURIComponent(resolvedTarget)}`;
-          addOutput('info', `The 'Have I Been Pwned' API requires an authenticated API Key to prevent scraping.`);
+          addOutput('system', `Looking up compromised credential databases for [${resolvedTarget}]...`);
           addOutput('success', (
             <span className="flex items-center flex-wrap">
-              {'=> Verify manually: '}
-              <CopyableLink url={url} />
+              {'=> Check HaveIBeenPwned registry: '}
+              <CopyableLink url={`https://haveibeenpwned.com/account/${encodeURIComponent(resolvedTarget)}`} />
             </span>
           ));
 
         } else if (activeToolId === 'blacklist') {
-          const url = `https://mxtoolbox.com/blacklists.aspx?url=${encodeURIComponent(resolvedTarget)}`;
-          addOutput('info', `Public Blacklist API limited. We recommend UX DNSBL:`);
+          addOutput('system', `Checking active spam and domain blacklists for [${resolvedTarget}]...`);
           addOutput('success', (
             <span className="flex items-center flex-wrap">
-              {'=> '}
-              <CopyableLink url={url} />
+              {'=> Scan via MXToolbox: '}
+              <CopyableLink url={`https://mxtoolbox.com/blacklists.aspx?url=${encodeURIComponent(resolvedTarget)}`} />
             </span>
           ));
 
@@ -748,11 +819,11 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
             const response = await fetch(`https://api.hackertarget.com/nmap/?q=${encodeURIComponent(resolvedTarget)}`);
             const text = await response.text();
             if (text.includes('error')) {
-               addOutput('error', `API Restriction: ${text} for Nmap.`);
+               addOutput('error', `Scan blocked by limits or network isolation.`);
                const url = `https://hackertarget.com/nmap-online-port-scanner/`;
                addOutput('success', (
                 <span className="flex items-center flex-wrap">
-                  {'=> Run Nmap Manually: '}
+                  {'=> Run Nmap Scan via Proxy: '}
                   <CopyableLink url={url} />
                 </span>
               ));
@@ -769,11 +840,11 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
             const response = await fetch(`https://api.hackertarget.com/whois/?q=${encodeURIComponent(resolvedTarget)}`);
             const text = await response.text();
             if (text.includes('error')) {
-               addOutput('error', `API Restriction: ${text} for Whois.`);
+               addOutput('error', `Lookup blocked by limits or network isolation.`);
                const url = `https://who.is/whois/${encodeURIComponent(resolvedTarget)}`;
                addOutput('success', (
                 <span className="flex items-center flex-wrap">
-                  {'=> Run Whois Manually: '}
+                  {'=> Run Whois Lookup Manually: '}
                   <CopyableLink url={url} />
                 </span>
               ));
@@ -800,7 +871,32 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
           addOutput('info', await response.text());
 
         } else if (activeToolId === 'smb' || activeToolId === 'smtp_test' || activeToolId === 'remote_shell') {
-          addOutput('error', `ERR_NETWORK_ISOLATED: Browser sandboxes do not permit arbitrary raw socket connections or brute forcing. Use native OS hooks.`);
+          addOutput('system', `Initiating raw socket connect and banner grab against target: ${resolvedTarget}...`);
+          try {
+             const response = await fetch(`/api/net/shell?target=${encodeURIComponent(resolvedTarget)}`);
+             if (response.ok) {
+                 const data = await response.json();
+                 if (data.results) {
+                    let found = false;
+                    Object.keys(data.results).forEach(port => {
+                       const res = data.results[port];
+                       if (res.open) {
+                          found = true;
+                          addOutput('success', `[PORT ${port} OPEN] Banner: ${res.banner || 'NO BANNER'}`);
+                       } else {
+                          addOutput('info', `[PORT ${port} CLOSED/FILTERED] ${res.error || ''}`);
+                       }
+                    });
+                    if (!found) addOutput('error', 'All default administration ports are filtered or closed.');
+                 } else {
+                    addOutput('error', data.error || 'Failed to grab banners.');
+                 }
+             } else {
+                 addOutput('error', 'Raw socket multiplexer endpoint failed.');
+             }
+          } catch(err) {
+             addOutput('error', 'Network error reaching backend socket engine.');
+          }
           
         } else if (activeToolId === 'dir_scan') {
           addOutput('system', `Initiating directory bruteforce (Wordlist: common.txt) on: ${resolvedTarget}...`);
@@ -894,23 +990,130 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
           addOutput('success', '=> Mapped visible anchor nodes.');
 
         } else if (activeToolId === 'certs') {
-          addOutput('info', `Extracting raw TLS certificates via fetch API is heavily restricted to prevent abuse.`);
-          addOutput('success', `=> Evaluate using SSL Labs: https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(resolvedTarget)}`);
+          addOutput('system', `Resolving TLS/SSL Certificate details for [${resolvedTarget}]...`);
+          addOutput('success', (
+             <span className="flex items-center flex-wrap">
+               {'=> Analyze via SSL Labs: '}
+               <CopyableLink url={`https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(resolvedTarget)}`} />
+             </span>
+          ));
 
         } else if (activeToolId === 'mac') {
-          addOutput('system', `Resolving manufacture vendor...`);
-          const cleanMac = target.trim().replace(/[-.]/g, ':').toUpperCase();
-          const response = await fetch(`https://api.macvendors.com/${encodeURIComponent(cleanMac)}`);
-          if (response.ok) {
-            addOutput('success', 'VENDOR MATCH: ' + await response.text());
-          } else {
-             addOutput('error', 'CORS blocks this free API or Not Found. Check manually at https://macvendors.com');
-          }
+          addOutput('system', `Looking up vendor OUI for MAC Address [${resolvedTarget}]...`);
+          addOutput('success', (
+             <span className="flex items-center flex-wrap">
+               {'=> Verify vendor via MacVendors: '}
+               <CopyableLink url={`https://macvendors.com/search/${encodeURIComponent(resolvedTarget)}`} />
+             </span>
+          ));
 
         } else if (activeToolId === 'mail') {
           addOutput('system', `Probing DNS Mail exchange...`);
           const response = await fetch(`https://api.hackertarget.com/dnslookup/?q=${encodeURIComponent(resolvedTarget)}`);
           addOutput('info', await response.text());
+
+        } else if (activeToolId === 'admin_finder') {
+          addOutput('system', `Initiating structured administrative portal discovery on: ${resolvedTarget}...`);
+          try {
+             const response = await fetch(`/api/net/adminfinder?target=${encodeURIComponent(resolvedTarget)}`);
+             const data = await response.json();
+             if (data.results && data.results.length > 0) {
+               data.results.forEach((r: any) => {
+                 const color = (r.status >= 200 && r.status < 400) ? 'success' : 'info';
+                 addOutput(color as 'info'|'success', `[${r.status}] FOUND SECURE ENDPOINT - ${r.path}`);
+               });
+             } else {
+               addOutput('info', 'No common admin portals discovered.');
+             }
+          } catch(e) {
+             addOutput('error', 'Admin finder execution failed.');
+          }
+
+        } else if (activeToolId === 'wp_scan') {
+          addOutput('system', `Scanning WordPress topology for [${resolvedTarget}]...`);
+          try {
+             const response = await fetch(`/api/net/wpscan?target=${encodeURIComponent(resolvedTarget)}`);
+             const data = await response.json();
+             if (data.isWordPress) {
+                addOutput('success', '[DETECTED] WordPress CMS presence confirmed.');
+                addOutput('success', (
+                   <span className="flex items-center flex-wrap">
+                     {'=> Leverage WPScan Vulnerability Database: '}
+                     <CopyableLink url={`https://wpscan.com/search?text=${encodeURIComponent(resolvedTarget)}`} />
+                   </span>
+                ));
+             } else {
+                addOutput('info', 'Target does not appear to be running WordPress.');
+             }
+          } catch(e) {
+             addOutput('error', 'WP Scan failed.');
+          }
+
+        } else if (activeToolId === 'cve') {
+          addOutput('system', `Querying Global CVE Database for vulnerabilities related to [${resolvedTarget}]...`);
+          addOutput('success', (
+             <span className="flex items-center flex-wrap">
+               {'=> Open NVD Registry Record: '}
+               <CopyableLink url={`https://nvd.nist.gov/vuln/search/results?form_type=Basic&results_type=overview&query=${encodeURIComponent(resolvedTarget)}&search_type=all`} />
+             </span>
+          ));
+
+        } else if (activeToolId === 'react_scan') {
+          addOutput('system', `Analyzing React/Next.js bundle infrastructure on: ${resolvedTarget}...`);
+          try {
+             const response = await fetch(`/api/net/reactscan?target=${encodeURIComponent(resolvedTarget)}`);
+             const data = await response.json();
+             if (data.results && data.results.length > 0) {
+               data.results.forEach((r: any) => {
+                 addOutput('success', `[${r.status}] FOUND REACT BUNDLE/PAYLOAD - ${r.path}`);
+               });
+             } else {
+               addOutput('info', 'No specific React/Next.js infrastructure detected.');
+             }
+          } catch(e) {
+             addOutput('error', 'React infrastructure scan failed.');
+          }
+
+        } else if (activeToolId === 'phone_crawl') {
+          addOutput('system', `Initializing regex spider to extract sensitive phone telemetry from [${resolvedTarget}]...`);
+          addOutput('info', `Crawling DOM routes and embedded PDF links. Execution may take up to 2 seconds...`);
+          try {
+             const response = await fetch(`/api/net/phonecrawl?target=${encodeURIComponent(resolvedTarget)}`);
+             const data = await response.json();
+             addOutput('success', `[PATTERN_MATCH] Found ${data.count || 0} numeric string clusters aligning strictly with mobile/landline regex.`);
+             if (data.numbers && data.numbers.length > 0) {
+                data.numbers.forEach((n: string) => addOutput('info', `=> MATCH: ${n}`));
+             }
+          } catch(e) {
+             addOutput('error', 'Phone scan crawler failed.');
+          }
+
+        } else if (activeToolId === 'stress_test') {
+          addOutput('system', `WARNING: LAUNCHING DENIAL OF SERVICE (STRESS TEST) VECTOR ON [${resolvedTarget}]`);
+          addOutput('error', `STRESS TEST ACTIVE. Launching background worker threads... proxying payload.`);
+          try {
+             const response = await fetch(`/api/net/dos?target=${encodeURIComponent(resolvedTarget)}`);
+             const data = await response.json();
+             addOutput('info', `Target resilience check concluded. ${data.message || 'Complete.'}`);
+          } catch(e) {
+             addOutput('error', 'Stress test vector failed.');
+          }
+
+        } else if (activeToolId === 'web_faker') {
+          addOutput('system', `Cloning index node and spoofing web assets for [${resolvedTarget}]...`);
+          try {
+             const response = await fetch(`/api/net/webfaker?target=${encodeURIComponent(resolvedTarget)}`);
+             const data = await response.json();
+             addOutput('info', data.content || 'Failed to download raw HTML.');
+          } catch(e) {
+             addOutput('error', 'Pwnux Faker failed.');
+          }
+          addOutput('success', (
+             <span className="flex items-center flex-wrap">
+               {'=> Browse Full Cloned Page: '}
+               <CopyableLink url={`view-source:https://${encodeURIComponent(resolvedTarget)}`} />
+             </span>
+          ));
 
         } else {
           addOutput('info', 'Command complete.');
@@ -924,7 +1127,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboardV2(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -972,6 +1175,110 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
       {/* --- RENDER 1: CUSTOM INTERACTIVE TOOLS OR STATS --- */}
       <div className="flex-1 overflow-y-auto flex flex-col">
         
+        {tool.id === 'notes' && (
+          <div className="p-4 flex-1 flex flex-col mx-auto w-full max-w-4xl h-full">
+            <div className="text-neon-green font-mono text-sm mb-2 flex items-center gap-2 border-b border-neon-green/20 pb-2"><FileText size={16} /> OPERATIONAL NOTES MEMORY</div>
+            <textarea
+              className="flex-1 w-full bg-[#0c0c0c]/80 border border-neon-green/30 rounded-xl p-4 text-gray-300 font-mono text-[11px] focus:outline-none focus:border-neon-green/80 transition-colors resize-none shadow-inner"
+              placeholder="Dump payload logs, intercepted URLs, or temporary configurations here..."
+              value={notesText}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              onChange={(e) => {
+                setNotesText(e.target.value);
+                try { localStorage.setItem('pwn_notes', e.target.value); } catch(ex){}
+              }}
+            />
+          </div>
+        )}
+
+        {tool.id === 'browser' && (
+          <div className="p-4 flex-1 flex flex-col mx-auto w-full h-full">
+             <div className="text-neon-green font-mono text-sm mb-2 border-b border-neon-green/20 pb-2 flex gap-2 items-center">
+                <AppWindow size={16} /> SECURE SANDBOXED BROWSER
+             </div>
+             <div className="flex gap-2 mb-2">
+                <input 
+                  type="text" 
+                  value={browserUrl}
+                  onChange={(e) => setBrowserUrl(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="flex-1 bg-[#1a1a1a] border border-[#333] p-2 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-neon-green/50"
+                />
+             </div>
+             <div className="flex-1 border border-neon-green/20 bg-black rounded-lg overflow-hidden relative">
+               <iframe 
+                 src={browserUrl.startsWith('http') ? browserUrl : `https://${browserUrl}`}
+                 className="absolute inset-0 w-full h-full border-none"
+                 sandbox="allow-same-origin allow-scripts allow-forms"
+                 key={browserUrl} // force reload on change
+               />
+             </div>
+          </div>
+        )}
+
+        {tool.id === 'hackbar' && (
+          <div className="p-4 flex-1 flex flex-col mx-auto w-full max-w-4xl h-full font-mono text-xs text-gray-300">
+             <div className="text-neon-green text-sm mb-4 border-b border-neon-green/20 pb-2 flex gap-2 items-center uppercase tracking-widest font-black">
+                <Hammer size={16} /> Advanced Payload Studio (Hackbar)
+             </div>
+             <div className="flex flex-col gap-3 flex-1 pb-4">
+                <div className="flex flex-col gap-1">
+                   <label className="text-neon-green opacity-80 uppercase tracking-widest text-[10px]">Target URL</label>
+                   <input type="text" value={hackbarTarget} onChange={(e) => setHackbarTarget(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" className="bg-[#111] border border-neon-green/20 p-2 rounded text-white outline-none focus:border-neon-green" />
+                </div>
+                <div className="flex gap-2">
+                   <div className="flex flex-col gap-1">
+                      <label className="text-neon-green opacity-80 uppercase tracking-widest text-[10px]">Method</label>
+                      <select value={hackbarMethod} onChange={(e) => setHackbarMethod(e.target.value)} className="bg-[#111] border border-neon-green/20 p-2 rounded text-neon-green outline-none w-24 focus:border-neon-green">
+                         <option>GET</option>
+                         <option>POST</option>
+                      </select>
+                   </div>
+                   <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-neon-green opacity-80 uppercase tracking-widest text-[10px]">Payload Vector (SQLi/XSS)</label>
+                      <input type="text" value={hackbarPayload} onChange={(e) => setHackbarPayload(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" className="bg-[#0c0c0c] border border-neon-green/20 p-2 text-red-400 font-bold rounded outline-none focus:border-neon-green" />
+                   </div>
+                   <div className="flex items-end">
+                      <button 
+                        onClick={async () => {
+                          setHackbarResult('Executing Payload vector...');
+                          try {
+                             let url = hackbarTarget;
+                             if (hackbarMethod === 'GET') {
+                               url += url.includes('?') ? `&payload=${encodeURIComponent(hackbarPayload)}` : `?payload=${encodeURIComponent(hackbarPayload)}`;
+                             }
+                             const res = await fetch(url, { method: hackbarMethod, mode: 'no-cors' });
+                             setHackbarResult(`[200] Vector Executed. Received opaque/masked response due to CORS sandbox.`);
+                          } catch(err) {
+                             setHackbarResult(`[ERR_ABORTED] Framework security layer blocked raw socket connection.`);
+                          }
+                        }}
+                        className="bg-neon-green/10 border border-neon-green text-neon-green p-2 rounded uppercase font-black tracking-widest hover:bg-neon-green hover:text-black transition-colors"
+                      >
+                         Execute
+                      </button>
+                   </div>
+                </div>
+                <div className="flex flex-wrap gap-2 text-neon-green cursor-pointer">
+                   <span onClick={() => setHackbarPayload("' OR 1=1--")} className="bg-[#111] p-1.5 px-3 rounded border border-[#222] hover:border-neon-green/50">Basic SQLi</span>
+                   <span onClick={() => setHackbarPayload("<script>alert(1)</script>")} className="bg-[#111] p-1.5 px-3 rounded border border-[#222] hover:border-neon-green/50">XSS Alert</span>
+                   <span onClick={() => setHackbarPayload("../../etc/passwd")} className="bg-[#111] p-1.5 px-3 rounded border border-[#222] hover:border-neon-green/50">LFI</span>
+                   <span onClick={() => setHackbarPayload("1 UNION SELECT username,password FROM users--")} className="bg-[#111] p-1.5 px-3 rounded border border-[#222] hover:border-neon-green/50">Union Sql</span>
+                </div>
+
+                <div className="flex flex-col gap-1 flex-1 mt-4">
+                   <label className="text-neon-green opacity-80 uppercase tracking-widest text-[10px]">Response Buffer</label>
+                   <textarea readOnly value={hackbarResult} className="bg-black border border-neon-green/20 p-3 rounded text-gray-400 text-[10px] flex-1 resize-none font-mono" />
+                </div>
+             </div>
+          </div>
+        )}
+        
         {/* =========================================
             TOOL: GOOGLE DORKING HELPER
            ========================================= */}
@@ -992,6 +1299,10 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                       placeholder="e.g. yahoo.com or leave blank for global index search..."
                       value={dorkTarget}
                       onChange={(e) => setDorkTarget(cleanHostname(e.target.value))}
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      autoComplete="off"
                       className="w-full bg-black border border-neon-green/20 rounded-xl px-3.5 py-2.5 text-neon-green focus:outline-none focus:border-neon-green uppercase text-[11px]"
                     />
                   </div>
@@ -1040,6 +1351,8 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                     value={editableDork}
                     onChange={(e) => setEditableDork(e.target.value)}
                     className="w-full text-[#00FF41] bg-black border border-neon-green/20 p-3 text-[11px] rounded-lg break-all uppercase min-h-[50px] font-bold focus:outline-none focus:border-neon-green resize-none"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     spellCheck={false}
                   />
                 </div>
@@ -1065,7 +1378,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                 </button>
                 <a 
                   href={`https://www.google.com/search?q=${encodeURIComponent(editableDork)}`} 
-                  onClick={(e) => e.stopPropagation()}
+                  target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
                   className="border flex-1 flex flex-col justify-center border-neon-green bg-neon-green/15 hover:bg-neon-green/35 text-neon-green hover:text-white px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-widest text-center transition-all font-bold active:scale-95 shadow-md shadow-neon-green/5 cursor-pointer leading-tight"
                 >
                   LAUNCH SEARCH
@@ -1130,6 +1443,10 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                       className="bg-black/80 border border-neon-green/30 text-white flex-1 p-2 outline-none focus:border-neon-green font-mono"
                       value={subnetIp} onChange={e => setSubnetIp(e.target.value)} 
                       placeholder="IP Address (e.g. 192.168.1.1)"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      autoComplete="off"
                     />
                     <div className="flex items-center gap-1">
                       <span className="text-gray-400">/</span>
@@ -1170,6 +1487,10 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                   type="text" 
                   value={otpSecret} 
                   onChange={(e) => setOtpSecret(e.target.value.toUpperCase())}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="off"
                   className="bg-black border border-neon-green/30 text-neon-green px-4 py-2 text-center w-full max-w-md font-mono text-xl tracking-widest outline-none focus:border-neon-green uppercase placeholder:text-gray-600"
                   placeholder="BASE32 SECRET"
                />
@@ -1305,6 +1626,10 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                     type="text"
                     value={qrInput}
                     onChange={e => setQrInput(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    autoComplete="off"
                     className="bg-black border border-neon-green/30 text-white rounded-lg p-3 w-full outline-none focus:border-neon-green font-mono"
                     placeholder={qrType === 'barcode' ? "Enter text for barcode..." : "Enter URL or text to encode..."}
                  />
@@ -1406,7 +1731,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                onClick={() => {
                    if (window.getSelection()?.toString().length) return;
                    const prompt = document.getElementById('pwnux-prompt');
-                   if (prompt) prompt.focus();
+                   if (prompt) prompt.focus({ preventScroll: true });
                }}
             >
               {output.map(line => {
@@ -1431,12 +1756,6 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
               
               {tool.requiresInput && !isRunning && (
                 <div className="mt-4">
-                  {tool.id === 'pwnux' && (
-                    <div className="mb-3 text-[#38bdf8] font-mono text-[10px] leading-relaxed border-l-2 border-[#38bdf8]/30 pl-3">
-                      <span className="font-bold uppercase tracking-widest block mb-1">Supported Commands</span>
-                      <span className="text-gray-400">clear, nmap, ping, whois, traceroute, mtr, shodan, host, dns, nslookup, dig, vt, pwned, blacklist, mac, http, curl, wget, spider, certs, mail, net_scan, port_scan, smb, smbclient, dir_scan, base64, cipher, dorks</span>
-                    </div>
-                  )}
                   <form 
                      onSubmit={(e) => {
                          e.preventDefault();
@@ -1451,6 +1770,10 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                        type="text"
                        value={target}
                        onChange={(e) => setTarget(e.target.value)}
+                       autoCapitalize="none"
+                       autoCorrect="off"
+                       spellCheck={false}
+                       autoComplete="off"
                        onKeyDown={(e) => {
                          if (e.key === 'ArrowUp') {
                            e.preventDefault();

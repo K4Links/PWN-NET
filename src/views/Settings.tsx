@@ -48,7 +48,7 @@ export function Settings() {
         {/* Brand Header with custom logo */}
         <div className="flex flex-col items-center justify-center py-6 border border-neon-green/20 bg-[#0c0c0c]/80 backdrop-blur-sm p-4 rounded-3xl text-center shadow-lg">
           <img 
-            src="https://i.postimg.cc/Y9wL20Xk/PWN-logo.png" 
+            src="https://i.postimg.cc/sQ6vLRrd/Screenshot-20260527-095019-Bazaart.jpg" 
             alt="PWN//NET Config" 
             className="h-[150px] w-auto object-contain hover:scale-105 transition-all duration-300 mix-blend-screen contrast-125" 
             referrerPolicy="no-referrer"
@@ -118,17 +118,21 @@ export function Settings() {
 
           <div className="space-y-2 text-xs">
             <span className="text-gray-500 uppercase text-[9px] font-bold">SHODAN RECON GATEWAY KEY:</span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full">
               <input 
                 type="password"
                 value={shodanKey}
                 onChange={(e) => setShodanKey(e.target.value)}
-                className="flex-1 bg-black border border-neon-green/20 rounded-xl px-3.5 py-2 focus:border-neon-green hover:border-neon-green/50 text-neon-green tracking-widest text-xs focus:outline-none transition-all"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoComplete="off"
+                className="flex-1 min-w-0 bg-black border border-neon-green/20 rounded-xl px-3.5 py-2 focus:border-neon-green hover:border-neon-green/50 text-neon-green tracking-widest text-xs focus:outline-none transition-all"
                 placeholder="PROVISION API TOKEN..."
               />
               <button 
                 onClick={() => setShodanKey('')}
-                className="border border-red-500/30 rounded-xl px-4 text-[10px] font-bold uppercase text-red-500 hover:border-red-500 hover:bg-red-500/10 transition-all cursor-pointer active:scale-95"
+                className="shrink-0 border border-red-500/30 rounded-xl px-4 text-[10px] font-bold uppercase text-red-500 hover:border-red-500 hover:bg-red-500/10 transition-all cursor-pointer active:scale-95 whitespace-nowrap"
               >
                 CLEAR
               </button>
