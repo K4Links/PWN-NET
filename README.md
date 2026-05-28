@@ -2,7 +2,7 @@
 
 [![PWNNET-homescreen.png](https://i.postimg.cc/fRYGFDX2/PWNNET-homescreen.png)](https://postimg.cc/fVTqS48m)
 
-**PWNNET** is a powerful, easy-to-use networking and diagnostics toolkit designed for students, security enthusiasts, and professionals. It provides **30+ practical tools** for network exploration, diagnostics, web reconnaissance, and security testing — all in a clean, responsive interface.
+**PWNNET** is a powerful, easy-to-use networking and diagnostics toolkit designed for students, security enthusiasts, and professionals. It provides **40+ practical tools** for network exploration, diagnostics, web reconnaissance, and security testing — all in a clean, responsive interface.
 
 **Available on Web + Android APK**
 
