@@ -36,7 +36,7 @@ export function TopBar({ title, onAboutClick }: TopBarProps) {
 
       <div className="text-xs font-mono tracking-widest uppercase flex items-center gap-3 relative z-0">
         <img 
-          src="https://i.postimg.cc/sQ6vLRrd/Screenshot-20260527-095019-Bazaart.jpg" 
+          src="https://i.postimg.cc/FsFhjMXz/Screenshot-20260528-172644-Bazaart.jpg" 
           alt="PWN//NET" 
           className="h-[48px] w-auto object-contain hover:scale-105 transition-all duration-300 opacity-90 mix-blend-screen contrast-125" 
           referrerPolicy="no-referrer" 

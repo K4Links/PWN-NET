@@ -422,29 +422,111 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
   };
 
   async function calculateOTP() {
-    let code = '';
-    for (let i = 0; i < 6; i++) code += Math.floor(Math.random() * 10).toString();
-    setOtpCode(code);
+    if (!otpSecret || otpSecret.trim().length < 8) {
+       setOtpCode('000000');
+       return;
+    }
+    try {
+      // Lazy load standard TOTP crypto
+      const { TOTP } = await import('otpauth');
+      const totp = new TOTP({
+        issuer: 'PWNNET',
+        label: 'User',
+        algorithm: 'SHA1',
+        digits: 6,
+        period: 30,
+        secret: otpSecret.replace(/\s+/g, '').toUpperCase()
+      });
+      const code = totp.generate();
+      setOtpCode(code);
+    } catch(err) {
+      setOtpCode('ERROR0');
+    }
   };
 
   async function measureSpeed() {
     setSpeedTestActive(true);
     setSpeedMetrics({ progress: 0, dl: 0, ul: 0, ping: 0, jitter: 0 });
     
-    // Simulate real bandwidth test using random generated data
-    let ping = Math.floor(Math.random() * 40 + 10);
-    let jitter = Math.floor(Math.random() * 5 + 1);
-    
-    for (let i = 0; i <= 100; i += 5) {
-      await new Promise(r => setTimeout(r, 100));
-      setSpeedMetrics(prev => ({
-        ...prev,
-        progress: i,
-        ping, jitter,
-        dl: i < 50 ? Math.random() * 50 + 100 : prev.dl, // 100-150 Mbps
-        ul: i >= 50 ? Math.random() * 20 + 30 : prev.ul   // 30-50 Mbps
-      }));
+    try {
+      // 1. Ping test
+      const pingDelays: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const start = performance.now();
+        await fetch('/api/net/ping?target=8.8.8.8').catch(() => {});
+        pingDelays.push(performance.now() - start);
+      }
+      const ping = Math.floor(pingDelays.reduce((a, b) => a + b, 0) / pingDelays.length);
+      const jitter = Math.floor(Math.max(...pingDelays) - Math.min(...pingDelays));
+      
+      setSpeedMetrics(prev => ({ ...prev, ping, jitter, progress: 20 }));
+
+      // 2. Download test (5MB)
+      const downloadSize = 5 * 1024 * 1024;
+      const dlStart = performance.now();
+      const dlResponse = await fetch(`/api/net/speedtest/download?size=${downloadSize}&t=${Date.now()}`);
+      if (dlResponse.body) {
+        const reader = dlResponse.body.getReader();
+        let received = 0;
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          received += value.length;
+          
+          const now = performance.now();
+          const elapsedSecs = (now - dlStart) / 1000;
+          if (elapsedSecs > 0.1) {
+             const bps = (received * 8) / elapsedSecs;
+             const mbps = bps / 1000000;
+             setSpeedMetrics(prev => ({
+               ...prev,
+               dl: mbps,
+               progress: 20 + (received / downloadSize) * 40
+             }));
+          }
+        }
+      }
+      const dlElapsed = (performance.now() - dlStart) / 1000;
+      const finalDlMbps = ((downloadSize * 8) / dlElapsed) / 1000000;
+      setSpeedMetrics(prev => ({ ...prev, dl: finalDlMbps, progress: 60 }));
+
+      // 3. Upload test (2MB)
+      const uploadSize = 2 * 1024 * 1024;
+      const payload = new Uint8Array(uploadSize);
+      // Fill with random data
+      for(let i=0; i<uploadSize; i++) payload[i] = Math.floor(Math.random() * 256);
+      
+      const ulStart = performance.now();
+      
+      // We do it in chunks to fake progress if we wanted, or just one big POST
+      // Native fetch doesn't give us upload progress easily. We will approximate.
+      const interval = setInterval(() => {
+         const elapsed = (performance.now() - ulStart) / 1000;
+         const approxUploaded = Math.min(uploadSize, (uploadSize / 2) * elapsed); // assume 2 seconds
+         const approxMbps = ((approxUploaded * 8) / elapsed) / 1000000;
+         setSpeedMetrics(prev => ({
+           ...prev,
+           ul: approxMbps || 0,
+           progress: 60 + (approxUploaded / uploadSize) * 35
+         }));
+      }, 200);
+
+      await fetch('/api/net/speedtest/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: payload
+      });
+      clearInterval(interval);
+      
+      const ulElapsed = (performance.now() - ulStart) / 1000;
+      const finalUlMbps = ((uploadSize * 8) / ulElapsed) / 1000000;
+      setSpeedMetrics(prev => ({ ...prev, ul: finalUlMbps, progress: 100 }));
+      
+    } catch (e) {
+       console.error("Speed test failed:", e);
     }
+    
     setSpeedTestActive(false);
   };
 
@@ -1249,14 +1331,20 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                         onClick={async () => {
                           setHackbarResult('Executing Payload vector...');
                           try {
-                             let url = hackbarTarget;
-                             if (hackbarMethod === 'GET') {
-                               url += url.includes('?') ? `&payload=${encodeURIComponent(hackbarPayload)}` : `?payload=${encodeURIComponent(hackbarPayload)}`;
+                             const urlParams = new URLSearchParams({
+                               target: hackbarTarget,
+                               method: hackbarMethod,
+                               payload: hackbarPayload
+                             });
+                             const res = await fetch(`/api/net/hackbar?${urlParams.toString()}`);
+                             const data = await res.json();
+                             if (data.error) {
+                               setHackbarResult(`[ERROR] ${data.error}`);
+                             } else {
+                               setHackbarResult(`[${data.status} ${data.statusText}]\n\n${data.data}`);
                              }
-                             const res = await fetch(url, { method: hackbarMethod, mode: 'no-cors' });
-                             setHackbarResult(`[200] Vector Executed. Received opaque/masked response due to CORS sandbox.`);
-                          } catch(err) {
-                             setHackbarResult(`[ERR_ABORTED] Framework security layer blocked raw socket connection.`);
+                          } catch(err: any) {
+                             setHackbarResult(`[ERR_ABORTED] Framework security layer blocked raw socket connection or backend unavailable.\n${err.message}`);
                           }
                         }}
                         className="bg-neon-green/10 border border-neon-green text-neon-green p-2 rounded uppercase font-black tracking-widest hover:bg-neon-green hover:text-black transition-colors"

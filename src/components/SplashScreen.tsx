@@ -55,7 +55,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
 
       <div className="z-10 flex flex-col items-center w-full max-w-md px-6">
         <motion.div 
-          className="relative mb-6 w-full max-w-[200px]"
+          className="relative mb-6 w-full max-w-[260px]"
           initial={{ scale: 0.95, opacity: 0, filter: "blur(8px)" }}
           animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
           transition={{ duration: 1.2, ease: "easeOut" }}
@@ -78,7 +78,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           />
           <div 
             className={`w-full aspect-square relative z-10 drop-shadow-2xl transition-all duration-300 contrast-125 brightness-150 ${isGlitching ? 'glitch-logo' : ''}`}
-            style={{ backgroundImage: 'url(https://i.postimg.cc/sQ6vLRrd/Screenshot-20260527-095019-Bazaart.jpg)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+            style={{ backgroundImage: 'url(https://i.postimg.cc/FsFhjMXz/Screenshot-20260528-172644-Bazaart.jpg)', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
           >
           </div>
         </motion.div>

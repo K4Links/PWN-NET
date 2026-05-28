@@ -4,6 +4,7 @@ import { createServer as createViteServer } from 'vite';
 import net from 'net';
 import dns from 'dns';
 import { promisify } from 'util';
+import cors from 'cors';
 
 const resolveMx = promisify(dns.resolveMx);
 const resolveTxt = promisify(dns.resolveTxt);
@@ -11,6 +12,7 @@ const resolveTxt = promisify(dns.resolveTxt);
 const app = express();
 const PORT = 3000;
 
+app.use(cors());
 app.use(express.json());
 
 // Helper for port scanning
@@ -702,7 +704,86 @@ app.get('/api/net/webfaker', async (req, res) => {
   }
 });
 
-// 17. WP Scanner
+// 17. Hackbar
+app.all('/api/net/hackbar', async (req, res) => {
+  const target = req.query.target as string;
+  const method = (req.query.method as string || 'GET').toUpperCase();
+  const payload = req.query.payload as string;
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target is required' });
+  
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http')) baseUrl = 'http://' + baseUrl;
+  
+  if (method === 'GET' && payload) {
+    baseUrl += baseUrl.includes('?') ? `&payload=${encodeURIComponent(payload)}` : `?payload=${encodeURIComponent(payload)}`;
+  }
+  
+  try {
+     const controller = new AbortController();
+     const timeoutId = setTimeout(() => controller.abort(), 10000);
+     
+     const fetchOptions: RequestInit = {
+       method,
+       signal: controller.signal
+     };
+     
+     if (method === 'POST' && payload) {
+       fetchOptions.body = new URLSearchParams({ payload });
+       fetchOptions.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+     }
+     
+     const response = await fetch(baseUrl, fetchOptions);
+     clearTimeout(timeoutId);
+     const html = await response.text();
+     
+     res.json({
+       status: response.status,
+       statusText: response.statusText,
+       data: html.substring(0, 5000)
+     });
+  } catch(e: any) {
+     res.status(500).json({ error: e.message || 'Failed to fetch source' });
+  }
+});
+
+// Speedtest Backend
+app.get('/api/net/speedtest/download', (req, res) => {
+  const size = parseInt(req.query.size as string) || 1024 * 1024 * 5; // default 5MB
+  res.set('Content-Type', 'application/octet-stream');
+  res.set('Content-Length', size.toString());
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  
+  const chunk = Buffer.alloc(1024 * 64, '0'); // 64KB chunks
+  let sent = 0;
+  
+  const sendData = () => {
+    while (sent < size) {
+      let toSend = Math.min(chunk.length, size - sent);
+      sent += toSend;
+      if (!res.write(chunk.slice(0, toSend))) {
+        res.once('drain', sendData);
+        return;
+      }
+    }
+    res.end();
+  };
+  
+  sendData();
+});
+
+app.post('/api/net/speedtest/upload', (req, res) => {
+  let received = 0;
+  req.on('data', chunk => {
+    received += chunk.length;
+  });
+  req.on('end', () => {
+    res.json({ success: true, bytesReceived: received });
+  });
+});
+
+// 18. WP Scanner
 app.get('/api/net/wpscan', async (req, res) => {
   const { target } = req.query;
   if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target is required' });
