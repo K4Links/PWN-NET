@@ -115,66 +115,109 @@ app.get('/api/net/blacklist', async (req, res) => {
   }
 });
 
-// 1.2 Shodan Proxy (Host Search)
-app.get('/api/net/shodan', async (req, res) => {
+// 1.2 DNS Endpoint Natively
+app.get('/api/net/dns', async (req, res) => {
   const { target } = req.query;
-  if (!target || typeof target !== 'string') {
-    return res.status(400).json({ error: 'Target is required' });
-  }
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target required' });
   try {
-    const data = await fetch(`https://api.hackertarget.com/hostsearch/?q=${encodeURIComponent(target)}`);
-    const text = await data.text();
-    res.json({ result: text });
+    let output = '';
+    output += `; <<>> PWN//NET DNS Lookup <<>> ${target}\n\n`;
+    try {
+       const ns = await dns.promises.resolveNs(target);
+       output += ';; NS RECORDS:\n' + ns.map(r => `${target}.\tIN\tNS\t${r}`).join('\n') + '\n\n';
+    } catch(e) {}
+    try {
+       const a = await dns.promises.resolve4(target);
+       output += ';; A RECORDS:\n' + a.map(r => `${target}.\tIN\tA\t${r}`).join('\n') + '\n\n';
+    } catch(e) {}
+    try {
+       const mx = await dns.promises.resolveMx(target);
+       output += ';; MX RECORDS:\n' + mx.map(r => `${target}.\tIN\tMX\t${r.priority} ${r.exchange}`).join('\n') + '\n\n';
+    } catch(e) {}
+    try {
+       const txt = await dns.promises.resolveTxt(target);
+       output += ';; TXT RECORDS:\n' + txt.map(r => `${target}.\tIN\tTXT\t"${r.join('')}"`).join('\n') + '\n';
+    } catch(e) {}
+    res.json({ result: output || 'No DNS records found.' });
   } catch (e) {
-    res.status(500).json({ error: 'Failed HT lookup' });
+    res.json({ result: 'No DNS records found or lookup failed.' });
   }
 });
 
-// 1.3 VirusTotal Proxy (Reverse IP/DNS)
-app.get('/api/net/vt', async (req, res) => {
+// 1.3 Whois Endpoint Natively
+app.get('/api/net/whois', async (req, res) => {
   const { target } = req.query;
-  if (!target || typeof target !== 'string') {
-    return res.status(400).json({ error: 'Target is required' });
-  }
+  if (!target || typeof target !== 'string') return res.status(400).json({ error: 'Target required' });
   try {
-    const isIp = /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/.test(target);
-    const api = isIp ? 'reverseiplookup' : 'dnslookup';
-    const data = await fetch(`https://api.hackertarget.com/${api}/?q=${encodeURIComponent(target)}`);
-    const text = await data.text();
-    res.json({ result: text });
-  } catch (e) {
-    res.status(500).json({ error: 'Failed HT lookup' });
+    const socket = new net.Socket();
+    let data = '';
+    socket.setTimeout(5000);
+    socket.connect(43, 'whois.iana.org', () => {
+      socket.write(target + '\r\n');
+    });
+    socket.on('data', chunk => data += chunk);
+    socket.on('end', () => res.json({ result: data }));
+    socket.on('error', () => res.json({ result: 'Whois lookup failed (connection error).' }));
+    socket.on('timeout', () => { socket.destroy(); res.json({ result: 'Whois lookup timed out.' }); });
+  } catch(e) {
+    res.json({ result: 'Failed to perform whois' });
   }
 });
 
-// 1.4 Spider Proxy (Page Links)
+// 1.4 Spider Proxy Natively
 app.get('/api/net/spider', async (req, res) => {
   const { target } = req.query;
   if (!target || typeof target !== 'string') {
     return res.status(400).json({ error: 'Target is required' });
   }
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'http://' + baseUrl;
+
   try {
-    const data = await fetch(`https://api.hackertarget.com/pagelinks/?q=${encodeURIComponent(target)}`);
-    const text = await data.text();
-    res.json({ result: text });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch(baseUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!response.ok) throw new Error('Bad status');
+    const text = await response.text();
+    
+    // Extract unique links
+    const matches = text.match(/href=["'](http[^"']+)["']/g) || [];
+    const links = [...new Set(matches.map(l => l.replace(/href=["']/i, '').replace(/["'].*$/, '')))];
+    
+    let result = `Page Links for ${baseUrl}:\n`;
+    result += links.slice(0, 30).join('\n');
+    if (links.length > 30) result += `\n...and ${links.length - 30} more.`;
+    if (links.length === 0) result += 'No external/absolute links found.';
+    
+    res.json({ result });
   } catch (e) {
-    res.status(500).json({ error: 'Failed HT lookup' });
+    res.json({ result: 'Failed to crawl target. Target may be blocking requests or offline.' });
   }
 });
 
-
-// 1.5 HTTP Headers
+// 1.5 HTTP Headers Natively
 app.get('/api/net/http', async (req, res) => {
   const { target } = req.query;
   if (!target || typeof target !== 'string') {
     return res.status(400).json({ error: 'Target is required' });
   }
+  let baseUrl = target.replace(/\/$/, "");
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) baseUrl = 'http://' + baseUrl;
+
   try {
-    const data = await fetch(`https://api.hackertarget.com/httpheaders/?q=${encodeURIComponent(target)}`);
-    const text = await data.text();
-    res.json({ result: text });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const response = await fetch(baseUrl, { method: 'HEAD', signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    let result = `HTTP/${response.status === 200 ? '1.1' : '1.1'} ${response.status} ${response.statusText}\n`;
+    for (const [key, value] of response.headers.entries()) {
+       result += `${key.replace(/(^\w|-\w)/g, c => c.toUpperCase())}: ${value}\n`;
+    }
+    res.json({ result });
   } catch (e) {
-    res.status(500).json({ error: 'Failed HT lookup' });
+    res.json({ result: 'Failed to fetch HTTP headers. Target may be offline.' });
   }
 });
 

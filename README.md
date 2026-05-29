@@ -1,7 +1,8 @@
-[![Screenshot-20260528-172644-Bazaart.jpg](https://i.postimg.cc/FsFhjMXz/Screenshot-20260528-172644-Bazaart.jpg)](https://postimg.cc/s18Fz0XC)
-[![homescreen.png](https://i.postimg.cc/BZgFgfkK/homescreen.png)](https://postimg.cc/Jtstrv1r)
+# PWNNET-Toolkit
 
-PWN//NET-Toolkit  is a powerful, easy-to-use networking and diagnostics toolkit designed for students, security enthusiasts, and professionals. It provides **40+ practical tools** for network exploration, diagnostics, web reconnaissance, and security testing — all in a clean, responsive interface.
+[![PWNNET-homescreen.png](https://i.postimg.cc/fRYGFDX2/PWNNET-homescreen.png)](https://postimg.cc/fVTqS48m) <a href="https://postimg.cc/5YcQpyP0" target="_blank"><img src="https://i.postimg.cc/5YcQpyP0/Screenshot-20260527-065254.jpg" alt="Screenshot-20260527-065254"></a>
+
+**PWNNET** is a powerful, easy-to-use networking and diagnostics toolkit designed for students, security enthusiasts, and professionals. It provides **40+ practical tools** for network exploration, diagnostics, web reconnaissance, and security testing — all in a clean, responsive interface.
 
 **Available on Web + Android APK**
 
@@ -90,7 +91,7 @@ Click the URL shown in the terminal (usually http://localhost:5173 or http://0.0
 
 ### ⭐ Support the Project
 
-If you find **PWN//NET** useful, please consider giving the project a **star** ⭐ — it helps a lot!
+If you find **PWNNET** useful, please consider giving the project a **star** ⭐ — it helps a lot!
 
 **Donations (optional but greatly appreciated):**
 

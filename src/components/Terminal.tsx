@@ -59,13 +59,23 @@ const CopyableLink = ({ url, label }: { url: string, label?: string }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const openExternal = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.location.hostname.includes('html2app') || window.location.protocol === 'file:' || /android|iphone|ipad|ipod/i.test(navigator.userAgent)) {
+        window.location.href = url;
+    } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <span className="inline-flex items-center gap-2 mt-1">
       <a 
         href={url} 
         target="_blank" 
         rel="noopener noreferrer" 
-        onClick={(e) => { e.stopPropagation(); }} 
+        onClick={openExternal} 
         className="underline hover:text-white break-all text-[#38bdf8]"
       >
         {label || url}
@@ -122,10 +132,6 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
   const [btError, setBtError] = useState<string>('');
   const [notesText, setNotesText] = useState(() => { try { return localStorage.getItem('pwn_notes') || ''; } catch(e) { return ''; } });
   const [browserUrl, setBrowserUrl] = useState('https://www.google.com/webhp?igu=1');
-  const [hackbarTarget, setHackbarTarget] = useState('http://testphp.vulnweb.com/listproducts.php?cat=1');
-  const [hackbarMethod, setHackbarMethod] = useState('GET');
-  const [hackbarPayload, setHackbarPayload] = useState('1 UNION SELECT 1,2,3--');
-  const [hackbarResult, setHackbarResult] = useState('');
 
   const dorkPresets: Record<string, {name: string, dorks: string[]}> = {
   index_of: {
@@ -453,7 +459,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
       const pingDelays: number[] = [];
       for (let i = 0; i < 5; i++) {
         const start = performance.now();
-        await fetch('/api/net/ping?target=8.8.8.8').catch(() => {});
+        await fetch('https://speed.cloudflare.com/__down?bytes=10').catch(() => {});
         pingDelays.push(performance.now() - start);
       }
       const ping = Math.floor(pingDelays.reduce((a, b) => a + b, 0) / pingDelays.length);
@@ -464,7 +470,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
       // 2. Download test (5MB)
       const downloadSize = 5 * 1024 * 1024;
       const dlStart = performance.now();
-      const dlResponse = await fetch(`/api/net/speedtest/download?size=${downloadSize}&t=${Date.now()}`);
+      const dlResponse = await fetch(`https://speed.cloudflare.com/__down?bytes=${downloadSize}`);
       if (dlResponse.body) {
         const reader = dlResponse.body.getReader();
         let received = 0;
@@ -512,7 +518,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
          }));
       }, 200);
 
-      await fetch('/api/net/speedtest/upload', {
+      await fetch('https://speed.cloudflare.com/__up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/octet-stream' },
         body: payload
@@ -845,10 +851,14 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
     try {
         if (activeToolId === 'ip_host') {
           addOutput('system', `Querying telemetry for ${resolvedTarget}...`);
-          const response = await fetch(`https://api.hackertarget.com/geoip/?q=${encodeURIComponent(resolvedTarget)}`);
-          const text = await response.text();
-          if (text.includes('error')) addOutput('error', text);
-          else addOutput('info', text);
+          try {
+             const response = await fetch(`https://api.hackertarget.com/geoip/?q=${encodeURIComponent(resolvedTarget)}`);
+             const text = await response.text();
+             if (text.includes('error')) addOutput('error', text);
+             else addOutput('info', text);
+          } catch(e: any) {
+             addOutput('error', e.message || 'Execution blocked by network.');
+          }
 
         } else if (activeToolId === 'shodan') {
           addOutput('system', `Pivoting to Open-Source Host Search for [${resolvedTarget}]...`);
@@ -952,98 +962,6 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
           const response = await fetch(`https://api.hackertarget.com/subnetcalc/?q=${encodeURIComponent(resolvedTarget)}`);
           addOutput('info', await response.text());
 
-        } else if (activeToolId === 'smb' || activeToolId === 'smtp_test' || activeToolId === 'remote_shell') {
-          addOutput('system', `Initiating raw socket connect and banner grab against target: ${resolvedTarget}...`);
-          try {
-             const response = await fetch(`/api/net/shell?target=${encodeURIComponent(resolvedTarget)}`);
-             if (response.ok) {
-                 const data = await response.json();
-                 if (data.results) {
-                    let found = false;
-                    Object.keys(data.results).forEach(port => {
-                       const res = data.results[port];
-                       if (res.open) {
-                          found = true;
-                          addOutput('success', `[PORT ${port} OPEN] Banner: ${res.banner || 'NO BANNER'}`);
-                       } else {
-                          addOutput('info', `[PORT ${port} CLOSED/FILTERED] ${res.error || ''}`);
-                       }
-                    });
-                    if (!found) addOutput('error', 'All default administration ports are filtered or closed.');
-                 } else {
-                    addOutput('error', data.error || 'Failed to grab banners.');
-                 }
-             } else {
-                 addOutput('error', 'Raw socket multiplexer endpoint failed.');
-             }
-          } catch(err) {
-             addOutput('error', 'Network error reaching backend socket engine.');
-          }
-          
-        } else if (activeToolId === 'dir_scan') {
-          addOutput('system', `Initiating directory bruteforce (Wordlist: common.txt) on: ${resolvedTarget}...`);
-          
-          const commonDirs = [
-            'admin', 'login', 'dashboard', 'api', 'assets', 'css', 'js', 'images',
-            'wp-admin', 'robots.txt', '.ENV', '.git', 'backup', 'old', 'test', 'logs'
-          ];
-          
-          let baseUrl = resolvedTarget.replace(/\/$/, "");
-          if (!baseUrl.startsWith('http')) baseUrl = 'http://' + baseUrl;
-
-          try {
-             // First try the backend proxy (if running in AI Studio)
-             const response = await fetch(`/api/net/dirscan?target=${encodeURIComponent(resolvedTarget)}`);
-             if (response.ok) {
-                 const data = await response.json();
-                 if (data.error) throw new Error(data.error);
-                 
-                 if (data.results && data.results.length > 0) {
-                    data.results.forEach((res: any) => {
-                        const { path, status } = res;
-                        const isFile = path.includes('.');
-                        const color = (status >= 200 && status < 300) ? 'success' : 'info';
-                        addOutput(color as 'info'|'success', `[${status}] - ${isFile ? '4KB' : '0KB'} - ${path}${isFile ? '' : '/'}`);
-                    });
-                    addOutput('info', 'Directory scan completed (via proxy).');
-                 } else {
-                    addOutput('info', 'Directory scan completed. No common directories found.');
-                 }
-                 setIsRunning(false);
-                 return;
-             }
-             throw new Error('Proxy failed or not reachable');
-          } catch (err) {
-             // Fallback for Android App running on client side (CORS must be disabled in webview)
-             addOutput('system', 'Local proxy not available. Executing client-side HEAD sweeps...');
-             
-             let i = 0;
-             const processClientScan = async () => {
-                if (i >= commonDirs.length) {
-                    addOutput('info', 'Directory scan completed.');
-                    setIsRunning(false);
-                    return;
-                }
-                const dir = commonDirs[i];
-                i++;
-                
-                try {
-                    const url = `${baseUrl}/${dir}`;
-                    const res = await fetch(url, { method: 'HEAD', redirect: 'manual' });
-                    if (res.status !== 404 && res.status !== 0) {
-                        const isFile = dir.includes('.');
-                        const color = (res.status >= 200 && res.status < 300) ? 'success' : 'info';
-                        addOutput(color as 'info'|'success', `[${res.status}] - ${isFile ? '4KB' : '0KB'} - /${dir}${isFile ? '' : '/'}`);
-                    }
-                } catch(e) {
-                   // Ignore network errors/cors
-                }
-                setTimeout(processClientScan, 50);
-             };
-             processClientScan();
-             return;
-          }
-
         } else if (activeToolId === 'traceroute') {
           addOutput('system', `Tracing hops to: ${resolvedTarget}...`);
           try {
@@ -1094,106 +1012,12 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
           const response = await fetch(`https://api.hackertarget.com/dnslookup/?q=${encodeURIComponent(resolvedTarget)}`);
           addOutput('info', await response.text());
 
-        } else if (activeToolId === 'admin_finder') {
-          addOutput('system', `Initiating structured administrative portal discovery on: ${resolvedTarget}...`);
-          try {
-             const response = await fetch(`/api/net/adminfinder?target=${encodeURIComponent(resolvedTarget)}`);
-             const data = await response.json();
-             if (data.results && data.results.length > 0) {
-               data.results.forEach((r: any) => {
-                 const color = (r.status >= 200 && r.status < 400) ? 'success' : 'info';
-                 addOutput(color as 'info'|'success', `[${r.status}] FOUND SECURE ENDPOINT - ${r.path}`);
-               });
-             } else {
-               addOutput('info', 'No common admin portals discovered.');
-             }
-          } catch(e) {
-             addOutput('error', 'Admin finder execution failed.');
-          }
-
-        } else if (activeToolId === 'wp_scan') {
-          addOutput('system', `Scanning WordPress topology for [${resolvedTarget}]...`);
-          try {
-             const response = await fetch(`/api/net/wpscan?target=${encodeURIComponent(resolvedTarget)}`);
-             const data = await response.json();
-             if (data.isWordPress) {
-                addOutput('success', '[DETECTED] WordPress CMS presence confirmed.');
-                addOutput('success', (
-                   <span className="flex items-center flex-wrap">
-                     {'=> Leverage WPScan Vulnerability Database: '}
-                     <CopyableLink url={`https://wpscan.com/search?text=${encodeURIComponent(resolvedTarget)}`} />
-                   </span>
-                ));
-             } else {
-                addOutput('info', 'Target does not appear to be running WordPress.');
-             }
-          } catch(e) {
-             addOutput('error', 'WP Scan failed.');
-          }
-
         } else if (activeToolId === 'cve') {
           addOutput('system', `Querying Global CVE Database for vulnerabilities related to [${resolvedTarget}]...`);
           addOutput('success', (
              <span className="flex items-center flex-wrap">
                {'=> Open NVD Registry Record: '}
                <CopyableLink url={`https://nvd.nist.gov/vuln/search/results?form_type=Basic&results_type=overview&query=${encodeURIComponent(resolvedTarget)}&search_type=all`} />
-             </span>
-          ));
-
-        } else if (activeToolId === 'react_scan') {
-          addOutput('system', `Analyzing React/Next.js bundle infrastructure on: ${resolvedTarget}...`);
-          try {
-             const response = await fetch(`/api/net/reactscan?target=${encodeURIComponent(resolvedTarget)}`);
-             const data = await response.json();
-             if (data.results && data.results.length > 0) {
-               data.results.forEach((r: any) => {
-                 addOutput('success', `[${r.status}] FOUND REACT BUNDLE/PAYLOAD - ${r.path}`);
-               });
-             } else {
-               addOutput('info', 'No specific React/Next.js infrastructure detected.');
-             }
-          } catch(e) {
-             addOutput('error', 'React infrastructure scan failed.');
-          }
-
-        } else if (activeToolId === 'phone_crawl') {
-          addOutput('system', `Initializing regex spider to extract sensitive phone telemetry from [${resolvedTarget}]...`);
-          addOutput('info', `Crawling DOM routes and embedded PDF links. Execution may take up to 2 seconds...`);
-          try {
-             const response = await fetch(`/api/net/phonecrawl?target=${encodeURIComponent(resolvedTarget)}`);
-             const data = await response.json();
-             addOutput('success', `[PATTERN_MATCH] Found ${data.count || 0} numeric string clusters aligning strictly with mobile/landline regex.`);
-             if (data.numbers && data.numbers.length > 0) {
-                data.numbers.forEach((n: string) => addOutput('info', `=> MATCH: ${n}`));
-             }
-          } catch(e) {
-             addOutput('error', 'Phone scan crawler failed.');
-          }
-
-        } else if (activeToolId === 'stress_test') {
-          addOutput('system', `WARNING: LAUNCHING DENIAL OF SERVICE (STRESS TEST) VECTOR ON [${resolvedTarget}]`);
-          addOutput('error', `STRESS TEST ACTIVE. Launching background worker threads... proxying payload.`);
-          try {
-             const response = await fetch(`/api/net/dos?target=${encodeURIComponent(resolvedTarget)}`);
-             const data = await response.json();
-             addOutput('info', `Target resilience check concluded. ${data.message || 'Complete.'}`);
-          } catch(e) {
-             addOutput('error', 'Stress test vector failed.');
-          }
-
-        } else if (activeToolId === 'web_faker') {
-          addOutput('system', `Cloning index node and spoofing web assets for [${resolvedTarget}]...`);
-          try {
-             const response = await fetch(`/api/net/webfaker?target=${encodeURIComponent(resolvedTarget)}`);
-             const data = await response.json();
-             addOutput('info', data.content || 'Failed to download raw HTML.');
-          } catch(e) {
-             addOutput('error', 'Pwnux Faker failed.');
-          }
-          addOutput('success', (
-             <span className="flex items-center flex-wrap">
-               {'=> Browse Full Cloned Page: '}
-               <CopyableLink url={`view-source:https://${encodeURIComponent(resolvedTarget)}`} />
              </span>
           ));
 
@@ -1304,70 +1128,6 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
           </div>
         )}
 
-        {tool.id === 'hackbar' && (
-          <div className="p-4 flex-1 flex flex-col mx-auto w-full max-w-4xl h-full font-mono text-xs text-gray-300">
-             <div className="text-neon-green text-sm mb-4 border-b border-neon-green/20 pb-2 flex gap-2 items-center uppercase tracking-widest font-black">
-                <Hammer size={16} /> Advanced Payload Studio (Hackbar)
-             </div>
-             <div className="flex flex-col gap-3 flex-1 pb-4">
-                <div className="flex flex-col gap-1">
-                   <label className="text-neon-green opacity-80 uppercase tracking-widest text-[10px]">Target URL</label>
-                   <input type="text" value={hackbarTarget} onChange={(e) => setHackbarTarget(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" className="bg-[#111] border border-neon-green/20 p-2 rounded text-white outline-none focus:border-neon-green" />
-                </div>
-                <div className="flex gap-2">
-                   <div className="flex flex-col gap-1">
-                      <label className="text-neon-green opacity-80 uppercase tracking-widest text-[10px]">Method</label>
-                      <select value={hackbarMethod} onChange={(e) => setHackbarMethod(e.target.value)} className="bg-[#111] border border-neon-green/20 p-2 rounded text-neon-green outline-none w-24 focus:border-neon-green">
-                         <option>GET</option>
-                         <option>POST</option>
-                      </select>
-                   </div>
-                   <div className="flex flex-col gap-1 flex-1">
-                      <label className="text-neon-green opacity-80 uppercase tracking-widest text-[10px]">Payload Vector (SQLi/XSS)</label>
-                      <input type="text" value={hackbarPayload} onChange={(e) => setHackbarPayload(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="off" className="bg-[#0c0c0c] border border-neon-green/20 p-2 text-red-400 font-bold rounded outline-none focus:border-neon-green" />
-                   </div>
-                   <div className="flex items-end">
-                      <button 
-                        onClick={async () => {
-                          setHackbarResult('Executing Payload vector...');
-                          try {
-                             const urlParams = new URLSearchParams({
-                               target: hackbarTarget,
-                               method: hackbarMethod,
-                               payload: hackbarPayload
-                             });
-                             const res = await fetch(`/api/net/hackbar?${urlParams.toString()}`);
-                             const data = await res.json();
-                             if (data.error) {
-                               setHackbarResult(`[ERROR] ${data.error}`);
-                             } else {
-                               setHackbarResult(`[${data.status} ${data.statusText}]\n\n${data.data}`);
-                             }
-                          } catch(err: any) {
-                             setHackbarResult(`[ERR_ABORTED] Framework security layer blocked raw socket connection or backend unavailable.\n${err.message}`);
-                          }
-                        }}
-                        className="bg-neon-green/10 border border-neon-green text-neon-green p-2 rounded uppercase font-black tracking-widest hover:bg-neon-green hover:text-black transition-colors"
-                      >
-                         Execute
-                      </button>
-                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2 text-neon-green cursor-pointer">
-                   <span onClick={() => setHackbarPayload("' OR 1=1--")} className="bg-[#111] p-1.5 px-3 rounded border border-[#222] hover:border-neon-green/50">Basic SQLi</span>
-                   <span onClick={() => setHackbarPayload("<script>alert(1)</script>")} className="bg-[#111] p-1.5 px-3 rounded border border-[#222] hover:border-neon-green/50">XSS Alert</span>
-                   <span onClick={() => setHackbarPayload("../../etc/passwd")} className="bg-[#111] p-1.5 px-3 rounded border border-[#222] hover:border-neon-green/50">LFI</span>
-                   <span onClick={() => setHackbarPayload("1 UNION SELECT username,password FROM users--")} className="bg-[#111] p-1.5 px-3 rounded border border-[#222] hover:border-neon-green/50">Union Sql</span>
-                </div>
-
-                <div className="flex flex-col gap-1 flex-1 mt-4">
-                   <label className="text-neon-green opacity-80 uppercase tracking-widest text-[10px]">Response Buffer</label>
-                   <textarea readOnly value={hackbarResult} className="bg-black border border-neon-green/20 p-3 rounded text-gray-400 text-[10px] flex-1 resize-none font-mono" />
-                </div>
-             </div>
-          </div>
-        )}
-        
         {/* =========================================
             TOOL: GOOGLE DORKING HELPER
            ========================================= */}
@@ -1471,7 +1231,16 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="border flex-1 flex flex-col justify-center border-neon-green bg-neon-green/15 hover:bg-neon-green/35 text-neon-green hover:text-white px-5 py-2.5 rounded-xl text-xs font-mono uppercase tracking-widest text-center transition-all font-bold active:scale-95 shadow-md shadow-neon-green/5 cursor-pointer leading-tight"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     const url = `https://www.google.com/search?q=${encodeURIComponent(editableDork)}`;
+                     if (window.location.hostname.includes('html2app') || window.location.protocol === 'file:' || /android|iphone|ipad|ipod/i.test(navigator.userAgent)) {
+                         window.location.href = url;
+                     } else {
+                         window.open(url, '_blank', 'noopener,noreferrer');
+                     }
+                  }}
                 >
                   LAUNCH SEARCH
                 </a>
