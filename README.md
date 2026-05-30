@@ -73,6 +73,7 @@ Click the URL shown in the terminal (usually http://localhost:5173 or http://0.0
 | Layer          | Technology                          |
 |----------------|-------------------------------------|
 | **Frontend**   | React + TypeScript + Vite           |
+| **Backend**    | Express + Node.js (Proxy & APIs)    |
 | **Styling**    | Tailwind CSS                        |
 | **Mobile**     | Android APK (Web-to-Native)         |
 | **Utilities**  | Node.js                             |
