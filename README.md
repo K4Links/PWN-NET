@@ -37,7 +37,7 @@
 
 ---
 
-### 📱 Mobile App (Android)
+### 📱 Mobile App (Android) **Working Properly Now
 
 1. Download the latest **`.apk`** from the [Releases](https://github.com/K4Links/PWNNET-Toolkit/releases) page.
 2. Enable **"Install from Unknown Sources"** in your Android security settings.
