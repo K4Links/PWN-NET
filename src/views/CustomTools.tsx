@@ -344,7 +344,7 @@ export function CipherTool({ tool, onClose }: { tool: ToolDef, onClose: () => vo
   const { value: inputVal, setValue: setInputVal, handleKeyDown, saveToHistory } = useInputHistory('');
   const [outputVal, setOutputVal] = useState('');
   const [mode, setMode] = useState<'encode' | 'decode' | 'analyze'>('encode');
-  const [algo, setAlgo] = useState<'base64' | 'hex' | 'url' | 'rot13' | 'binary'>('base64');
+  const [algo, setAlgo] = useState<'base64' | 'hex' | 'url' | 'rot13' | 'binary' | 'morse' | 'atbash' | 'reverse' | 'base32'>('base64');
 
   const rot13 = (s: string) => s.replace(/[a-zA-Z]/g, c => {
     const charCode = c.charCodeAt(0) + 13;
@@ -352,11 +352,45 @@ export function CipherTool({ tool, onClose }: { tool: ToolDef, onClose: () => vo
     return String.fromCharCode(limit >= charCode ? charCode : charCode - 26);
   });
 
+  const atbash = (s: string) => s.replace(/[a-zA-Z]/g, c => {
+    const isUpper = c <= 'Z';
+    const charCode = c.charCodeAt(0);
+    const base = isUpper ? 65 : 97;
+    return String.fromCharCode(base + (25 - (charCode - base)));
+  });
+
+  const MORSE_CODE_MAP: Record<string, string> = { "A": ".-", "B": "-...", "C": "-.-.", "D": "-..", "E": ".", "F": "..-.", "G": "--.", "H": "....", "I": "..", "J": ".---", "K": "-.-", "L": ".-..", "M": "--", "N": "-.", "O": "---", "P": ".--.", "Q": "--.-", "R": ".-.", "S": "...", "T": "-", "U": "..-", "V": "...-", "W": ".--", "X": "-..-", "Y": "-.--", "Z": "--..", "1": ".----", "2": "..---", "3": "...--", "4": "....-", "5": ".....", "6": "-....", "7": "--...", "8": "---..", "9": "----.", "0": "-----", ",": "--..--", ".": ".-.-.-", "?": "..--..", "/": "-..-.", "-": "-....-", "(": "-.--.", ")": "-.--.-", " ": "/" };
+  const REVERSE_MORSE = Object.fromEntries(Object.entries(MORSE_CODE_MAP).map(([k,v]) => [v,k]));
+
+  const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const base32encode = (s: string) => {
+    let result = ""; let buffer = 0; let bitsLeft = 0;
+    for (let i = 0; i < s.length; i++) {
+      buffer = (buffer << 8) | s.charCodeAt(i); bitsLeft += 8;
+      while (bitsLeft >= 5) { result += base32chars[(buffer >> (bitsLeft - 5)) & 31]; bitsLeft -= 5; }
+    }
+    if (bitsLeft > 0) result += base32chars[(buffer << (5 - bitsLeft)) & 31];
+    const padding = result.length % 8; return padding > 0 ? result + "=".repeat(8 - padding) : result;
+  };
+  const base32decode = (s: string) => {
+    let result = ""; let buffer = 0; let bitsLeft = 0;
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === "=") break;
+      const index = base32chars.indexOf(s[i].toUpperCase());
+      if (index === -1) continue;
+      buffer = (buffer << 5) | index; bitsLeft += 5;
+      if (bitsLeft >= 8) { result += String.fromCharCode((buffer >> (bitsLeft - 8)) & 255); bitsLeft -= 8; }
+    }
+    return result;
+  };
+
   const analyze = (str: string) => {
     let result = '';
-    if (/^[A-Za-z0-9+/=]+$/.test(str) && str.length % 4 === 0) result += '• Detected Base64 Padding\n';
+    if (/^[A-Za-z0-9+/=]+$/.test(str) && str.length % 4 === 0) result += '• Detected Base64 format\n';
+    if (/^[A-Z2-7=]+$/.test(str.toUpperCase())) result += '• Detected Base32 format\n';
     if (/^[0-9A-Fa-f]+$/.test(str)) result += '• Detected Hexadecimal string\n';
     if (/^[01\s]+$/.test(str)) result += '• Detected Binary string\n';
+    if (/^[\.\-\/\s]+$/.test(str)) result += '• Detected Morse Code\n';
     if (/%[0-9A-Fa-f]{2}/.test(str)) result += '• Detected URL Encoding\n';
     if (result === '') result = '• No standard formats detected. Pure plaintext or custom cipher?';
     return result;
@@ -378,7 +412,11 @@ export function CipherTool({ tool, onClose }: { tool: ToolDef, onClose: () => vo
         if (algo === 'url') setOutputVal(encodeURIComponent(inputVal));
         if (algo === 'hex') setOutputVal(Array.from(inputVal).map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
         if (algo === 'rot13') setOutputVal(rot13(inputVal));
+        if (algo === 'atbash') setOutputVal(atbash(inputVal));
         if (algo === 'binary') setOutputVal(Array.from(inputVal).map(c => c.charCodeAt(0).toString(2).padStart(8,'0')).join(' '));
+        if (algo === 'morse') setOutputVal(inputVal.toUpperCase().split('').map(c => MORSE_CODE_MAP[c] || c).join(' '));
+        if (algo === 'reverse') setOutputVal(inputVal.split('').reverse().join(''));
+        if (algo === 'base32') setOutputVal(base32encode(inputVal));
       } else {
         if (algo === 'base64') setOutputVal(atob(inputVal));
         if (algo === 'url') setOutputVal(decodeURIComponent(inputVal));
@@ -389,7 +427,11 @@ export function CipherTool({ tool, onClose }: { tool: ToolDef, onClose: () => vo
           setOutputVal(str);
         }
         if (algo === 'rot13') setOutputVal(rot13(inputVal)); // rot13 is its own inverse
+        if (algo === 'atbash') setOutputVal(atbash(inputVal)); // atbash is its own inverse
         if (algo === 'binary') setOutputVal(inputVal.replace(/[^01]/g,'').match(/.{1,8}/g)?.map(b => String.fromCharCode(parseInt(b, 2))).join('') || 'ERROR');
+        if (algo === 'morse') setOutputVal(inputVal.split(' ').map(c => REVERSE_MORSE[c] || c).join('').replace(/\//g, ' '));
+        if (algo === 'reverse') setOutputVal(inputVal.split('').reverse().join(''));
+        if (algo === 'base32') setOutputVal(base32decode(inputVal));
       }
     } catch {
       setOutputVal('MALFORMED INPUT STRING.');
@@ -413,11 +455,11 @@ export function CipherTool({ tool, onClose }: { tool: ToolDef, onClose: () => vo
 
         {mode !== 'analyze' && (
           <div className="flex flex-wrap gap-2">
-             {['base64', 'hex', 'url', 'rot13', 'binary'].map(a => (
+             {['base64', 'base32', 'hex', 'binary', 'url', 'rot13', 'atbash', 'morse', 'reverse'].map(a => (
                 <button 
                   key={a}
                   onClick={() => setAlgo(a as any)}
-                  className={`px-4 py-2 border rounded-full text-[10px] uppercase font-bold tracking-widest transition-all ${algo === a ? 'bg-neon-green/20 border-neon-green text-neon-green' : 'border-white/10 text-gray-500 hover:border-white/30'}`}
+                  className={`px-3 py-1.5 border rounded-full text-[10px] uppercase font-bold tracking-widest transition-all ${algo === a ? 'bg-neon-green/20 border-neon-green text-neon-green' : 'border-white/10 text-gray-500 hover:border-white/30'}`}
                 >
                   {a}
                 </button>
@@ -1349,7 +1391,6 @@ export function CustomToolRouter({ tool, onClose }: { tool: ToolDef, onClose: ()
     case 'otp': return <OtpDecoderTool tool={tool} onClose={onClose} />;
     case 'passwords': return <PasswordsTool tool={tool} onClose={onClose} />;
     case 'speed': return <SpeedTestTool tool={tool} onClose={onClose} />;
-    case 'base64':
     case 'cipher': return <CipherTool tool={tool} onClose={onClose} />;
     case 'security': return <SecurityCheckTool tool={tool} onClose={onClose} />;
     case 'notes': return <NotesTool tool={tool} onClose={onClose} />;
