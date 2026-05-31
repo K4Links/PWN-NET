@@ -91,6 +91,7 @@ export function OtpDecoderTool({ tool, onClose }: { tool: ToolDef, onClose: () =
   }, [result?.valid, secret, timeOffset]);
 
   const handleDecode = (valToDecode?: string, offset: number = timeOffset) => {
+    (document.activeElement as HTMLElement)?.blur();
     saveToHistory();
     const s = valToDecode ?? secret;
     if (!s) return;
@@ -493,6 +494,7 @@ export function IpCalcTool({ tool, onClose }: { tool: ToolDef, onClose: () => vo
   const [result, setResult] = useState<any>(null);
 
   const calculate = () => {
+    (document.activeElement as HTMLElement)?.blur();
     saveToHistory();
     try {
       const parts = ip.split('/');
@@ -731,6 +733,7 @@ export function HackbarTool({ tool, onClose }: { tool: ToolDef, onClose: () => v
   
   const executeAttack = async () => {
     if (!url) return;
+    (document.activeElement as HTMLElement)?.blur();
     setLoading(true);
     setResponse(null);
     setActiveTab('RESPONSE');
@@ -751,7 +754,7 @@ export function HackbarTool({ tool, onClose }: { tool: ToolDef, onClose: () => v
   return (
     <CustomToolLayout tool={tool} onClose={onClose}>
       <div className="space-y-4 block h-full flex flex-col">
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             value={url}
@@ -761,27 +764,29 @@ export function HackbarTool({ tool, onClose }: { tool: ToolDef, onClose: () => v
             className="flex-1 bg-[#050505] border border-neon-green/20 focus:border-neon-green rounded-xl p-4 text-neon-green font-mono text-xs outline-none transition-all"
             placeholder="target url + param (e.g. https://example.com?id=)"
           />
-          <button 
-            onClick={executeAttack}
-            disabled={loading}
-            className={`px-6 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${loading ? 'bg-neon-green/5 text-neon-green/50 border border-neon-green/20 cursor-not-allowed' : 'bg-neon-green text-black hover:bg-neon-green hover:shadow-[0_0_15px_rgba(57,255,20,0.4)]'}`}
-          >
-            {loading ? 'EXECUTING...' : 'EXECUTE'}
-          </button>
-          <button 
-            onClick={copyUrl}
-            className="bg-neon-green/10 text-neon-green border border-neon-green/30 px-6 rounded-xl text-xs font-bold hover:bg-neon-green hover:text-black transition-all whitespace-nowrap"
-          >
-            {copied ? 'COPIED!' : 'COPY'}
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button 
+              onClick={executeAttack}
+              disabled={loading}
+              className={`flex-1 sm:flex-initial px-6 py-4 sm:py-0 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${loading ? 'bg-neon-green/5 text-neon-green/50 border border-neon-green/20 cursor-not-allowed' : 'bg-neon-green text-black hover:bg-neon-green hover:shadow-[0_0_15px_rgba(57,255,20,0.4)]'}`}
+            >
+              {loading ? 'EXECUTING...' : 'EXECUTE'}
+            </button>
+            <button 
+              onClick={copyUrl}
+              className="bg-neon-green/10 text-neon-green border border-neon-green/30 px-6 py-4 sm:py-0 rounded-xl text-xs font-bold hover:bg-neon-green hover:text-black transition-all whitespace-nowrap"
+            >
+              {copied ? 'COPIED!' : 'COPY'}
+            </button>
+          </div>
         </div>
         
-        <div className="flex gap-2 border-b border-neon-green/20 pb-2 overflow-x-auto">
+        <div className="flex gap-2 border-b border-neon-green/20 pb-2 overflow-x-auto scrollbar-thin scrollbar-thumb-neon-green/20">
           {[...Object.keys(payloads), 'RESPONSE'].map(cat => (
             <button
               key={cat}
               onClick={() => setActiveTab(cat as any)}
-              className={`px-3 py-1 font-mono text-[10px] font-bold rounded whitespace-nowrap ${activeTab === cat ? 'bg-neon-green text-black' : 'text-neon-green hover:bg-neon-green/10'}`}
+              className={`px-3 py-1.5 sm:py-1 font-mono text-xs sm:text-[10px] font-bold rounded whitespace-nowrap flex-1 sm:flex-initial ${activeTab === cat ? 'bg-neon-green text-black' : 'text-neon-green hover:bg-neon-green/10'}`}
             >
               {cat}
             </button>
@@ -805,18 +810,18 @@ export function HackbarTool({ tool, onClose }: { tool: ToolDef, onClose: () => v
              </div>
            ) : (
              payloads[activeTab as keyof typeof payloads].map((p, i) => (
-             <div key={i} className="flex gap-4 items-center bg-[#050505] border border-neon-green/10 p-3 rounded-lg hover:border-neon-green/30 transition-all">
-                <code className="text-neon-green/80 flex-1 text-[10px] break-all">{p}</code>
-                <div className="flex gap-2 items-center shrink-0">
+             <div key={i} className="flex flex-col sm:flex-row gap-4 sm:items-center bg-[#050505] border border-neon-green/10 p-4 sm:p-3 rounded-lg hover:border-neon-green/30 transition-all">
+                <code className="text-neon-green/80 flex-1 text-xs sm:text-[10px] break-all">{p}</code>
+                <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
                   <button
                     onClick={() => setUrl(prev => prev + p)}
-                    className="bg-neon-green/5 text-neon-green border border-neon-green/20 px-3 py-1 rounded text-[10px] font-bold hover:bg-neon-green hover:text-black transition-all whitespace-nowrap"
+                    className="flex-1 sm:flex-initial bg-neon-green/5 text-neon-green border border-neon-green/20 px-3 py-2 sm:py-1 rounded text-xs sm:text-[10px] font-bold hover:bg-neon-green hover:text-black transition-all whitespace-nowrap"
                   >
                     APPEND
                   </button>
                   <button
                     onClick={() => setUrl(prev => prev + encodeURIComponent(p))}
-                    className="bg-neon-green/5 text-neon-green border border-neon-green/20 px-3 py-1 rounded text-[10px] font-bold hover:bg-neon-green hover:text-black transition-all whitespace-nowrap"
+                    className="flex-1 sm:flex-initial bg-neon-green/5 text-neon-green border border-neon-green/20 px-3 py-2 sm:py-1 rounded text-xs sm:text-[10px] font-bold hover:bg-neon-green hover:text-black transition-all whitespace-nowrap"
                   >
                     URL ENCODE
                   </button>
@@ -825,7 +830,7 @@ export function HackbarTool({ tool, onClose }: { tool: ToolDef, onClose: () => v
                       setUrl(prev => prev + p);
                       setTimeout(() => executeAttack(), 100);
                     }}
-                    className="bg-neon-green text-black px-3 py-1 rounded text-[10px] font-bold hover:bg-white hover:text-black transition-all whitespace-nowrap"
+                    className="flex-1 sm:flex-initial bg-neon-green text-black px-3 py-2 sm:py-1 rounded text-xs sm:text-[10px] font-bold hover:bg-white hover:text-black transition-all whitespace-nowrap"
                   >
                     FIRE
                   </button>
@@ -907,9 +912,11 @@ function NfcTool({ tool, onClose }: { tool: ToolDef, onClose: () => void }) {
   const [records, setRecords] = useState<any[]>([]);
 
   const startScan = async () => {
+    (document.activeElement as HTMLElement)?.blur();
     try {
       if (!('NDEFReader' in window)) {
-        setMessage('Web NFC is not supported on this browser/device. (Requires Android Chrome)');
+        setMessage('Cannot connect. Make sure NFC is turned on and supported by this device.');
+        setScanning(false);
         return;
       }
       setScanning(true);
@@ -982,22 +989,39 @@ function NfcTool({ tool, onClose }: { tool: ToolDef, onClose: () => void }) {
 }
 
 export function CveTool({ tool, onClose }: { tool: ToolDef, onClose: () => void }) {
-  const { value: cveId, setValue: setCveId, handleKeyDown, saveToHistory } = useInputHistory('CVE-2021-44228');
+  const { value: cveId, setValue: setCveId, handleKeyDown, saveToHistory } = useInputHistory('');
   const [data, setData] = useState<any>(null);
+  const [recentCves, setRecentCves] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const searchCve = async () => {
-    if (!cveId) return;
-    saveToHistory();
+  useEffect(() => {
+    const backendUrl = (import.meta as any).env.VITE_BACKEND_URL || '';
+    fetch(`${backendUrl}/api/net/cve/recent`)
+      .then(r => r.json())
+      .then(d => {
+         if (Array.isArray(d)) {
+            setRecentCves(d.slice(0, 15));
+         }
+      })
+      .catch(() => {});
+  }, []);
+
+  const searchCve = async (idToSearch?: string) => {
+    const targetId = idToSearch || cveId;
+    if (!targetId) return;
+    (document.activeElement as HTMLElement)?.blur();
+    if (!idToSearch) saveToHistory();
     setLoading(true);
     setError('');
     setData(null);
     try {
-      const res = await fetch(`https://cveawg.mitre.org/api/cve/${cveId.trim().toUpperCase()}`);
+      const backendUrl = (import.meta as any).env.VITE_BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/api/net/cve/search?id=${encodeURIComponent(targetId)}`);
       if (!res.ok) throw new Error('CVE not found or API error');
       const json = await res.json();
-      setData(json);
+      if (!json || !json.data) throw new Error('CVE not found');
+      setData({ fallback: json.fallback, data: json.data });
     } catch(e: any) {
       setError(e.message);
     } finally {
@@ -1008,6 +1032,9 @@ export function CveTool({ tool, onClose }: { tool: ToolDef, onClose: () => void 
   return (
     <CustomToolLayout tool={tool} onClose={onClose}>
       <div className="flex flex-col h-full space-y-4">
+        <label className="text-gray-500 text-[10px] font-bold uppercase tracking-widest block">
+          {recentCves.length > 0 && !data ? 'RECENT CVEs & SEARCH' : 'CVE DATABASE SEARCH'}
+        </label>
         <div className="flex gap-4 p-1 block">
           <input
             type="text"
@@ -1015,43 +1042,143 @@ export function CveTool({ tool, onClose }: { tool: ToolDef, onClose: () => void 
             onChange={e => setCveId(e.target.value)}
             onKeyDown={handleKeyDown}
             className="flex-1 bg-[#050505] border border-neon-green/20 focus:border-neon-green rounded-xl p-4 text-neon-green font-mono text-xs outline-none transition-all uppercase"
-            placeholder="e.g. CVE-2021-44228"
+            placeholder="e.g. CVE-2024-1234"
           />
           <button
-            onClick={searchCve}
+            onClick={() => searchCve()}
             disabled={loading}
             className="bg-neon-green/10 text-neon-green border border-neon-green/30 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-neon-green hover:text-black transition-all disabled:opacity-50"
           >
-            {loading ? '...' : 'QUERY'}
+            {loading ? '...' : 'FIND'}
           </button>
         </div>
 
-        {error && <div className="text-red-500 border border-red-500/20 bg-red-500/5 p-4 rounded-xl text-xs uppercase">{error}</div>}
+        {error && (
+          <div className="p-4 border border-red-500/30 text-red-500 bg-red-500/10 rounded-xl text-xs">
+            {error}
+          </div>
+        )}
+
+        {!data && !error && recentCves.length > 0 && (
+          <div className="flex-1 overflow-auto bg-[#050505] p-4 rounded-xl border border-neon-green/20">
+             <div className="space-y-4">
+                {recentCves.map((cve, i) => (
+                  <div key={i} className="border-b border-neon-green/10 pb-4 last:border-0 cursor-pointer hover:bg-neon-green/5 p-2 rounded transition-all" onClick={() => searchCve(cve.id)}>
+                     <div className="flex items-center justify-between mb-1">
+                        <span className="text-neon-green font-bold text-xs">{cve.id}</span>
+                        {cve.cvss && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30">CVSS: {cve.cvss}</span>}
+                     </div>
+                     <p className="text-gray-400 text-[10px] line-clamp-2">{cve.summary}</p>
+                  </div>
+                ))}
+             </div>
+          </div>
+        )}
 
         {data && (
-          <div className="flex-1 overflow-auto border border-neon-green/20 rounded-xl bg-[#050505] p-4 text-xs font-mono">
-             <div className="text-neon-green font-bold text-sm mb-4">{data.cveMetadata?.cveId} - {data.cveMetadata?.state}</div>
-             {data.containers?.cna?.descriptions?.map((desc: any, idx: number) => (
-                <div key={idx} className="text-white/80 mb-4 whitespace-pre-wrap">{desc.value}</div>
-             ))}
-             {data.containers?.cna?.metrics && data.containers?.cna?.metrics.length > 0 && (
-                <div className="mb-4">
-                  <span className="text-gray-500 font-bold block mb-2">METRICS:</span>
-                  <pre className="text-neon-green/80 overflow-x-auto text-[10px]">
-                    {JSON.stringify(data.containers.cna.metrics, null, 2)}
-                  </pre>
+          <div className="flex-1 overflow-auto bg-[#050505] p-4 rounded-xl border border-neon-green/20 scrollbar-thin scrollbar-thumb-neon-green/20">
+            <h3 className="text-neon-green font-bold text-lg mb-4">
+              {data.fallback ? data.data.id : (data.data.cveMetadata?.cveId || 'CVE DETAILS')}
+            </h3>
+            
+            {data.fallback ? (
+              <div className="space-y-4 text-xs font-mono">
+                 <div className="text-gray-400">
+                    <span className="text-gray-500 font-bold">SUMMARY:</span><br/>
+                    <span className="text-gray-300">{data.data.summary}</span>
+                 </div>
+                 <div className="text-gray-400">
+                    <span className="text-gray-500 font-bold">PUBLISHED:</span> {data.data.Published}
+                 </div>
+                 {data.data.cvss && (
+                   <div className="text-gray-400">
+                      <span className="text-gray-500 font-bold">CVSS:</span> <span className="text-red-400">{data.data.cvss}</span>
+                   </div>
+                 )}
+                 {data.data.references && data.data.references.length > 0 && (
+                   <div className="text-gray-400 mt-4">
+                     <span className="text-gray-500 font-bold block mb-2">REFERENCES:</span>
+                     <ul className="list-disc pl-4 space-y-1">
+                       {data.data.references.slice(0,10).map((r: string, i: number) => (
+                         <li key={i}><a href={r} target="_blank" rel="noreferrer" className="text-neon-green/80 hover:underline hover:text-neon-green break-all">{r}</a></li>
+                       ))}
+                     </ul>
+                   </div>
+                 )}
+              </div>
+            ) : (
+              <div className="space-y-4 text-xs font-mono">
+                {data.data.containers?.cna?.descriptions?.map((desc: any, idx: number) => (
+                  <div key={idx} className="text-gray-400">
+                    <span className="text-gray-500 font-bold block mb-2">DESCRIPTION:</span>
+                    <span className="text-gray-200">{desc.value}</span>
+                  </div>
+                ))}
+
+                <div className="text-gray-400">
+                  <span className="text-gray-500 font-bold">STATE:</span>{' '}
+                  <span className={data.data.cveMetadata?.state === 'PUBLISHED' ? 'text-neon-green' : 'text-yellow-500'}>
+                    {data.data.cveMetadata?.state || 'UNKNOWN'}
+                  </span>
                 </div>
-             )}
-             {data.containers?.cna?.references && (
-                <div>
-                   <span className="text-gray-500 font-bold block mb-2">REFERENCES:</span>
-                   <ul className="space-y-1">
-                     {data.containers.cna.references.map((ref: any, idx: number) => (
-                       <li key={idx}><a href={ref.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{ref.url}</a></li>
-                     ))}
-                   </ul>
-                </div>
-             )}
+
+                {data.data.containers?.cna?.metrics?.[0]?.cvssV3_1 && (
+                  <div className="text-gray-400">
+                    <span className="text-gray-500 font-bold">CVSS v3.1 BASE SCORE:</span>{' '}
+                    <span className="text-red-500 font-bold">{data.data.containers.cna.metrics[0].cvssV3_1.baseScore}</span>
+                    {' '}({data.data.containers.cna.metrics[0].cvssV3_1.baseSeverity})
+                  </div>
+                )}
+                
+                {data.data.containers?.cna?.metrics?.[0]?.cvssV3_0 && (
+                  <div className="text-gray-400">
+                    <span className="text-gray-500 font-bold">CVSS v3.0 BASE SCORE:</span>{' '}
+                    <span className="text-red-500 font-bold">{data.data.containers.cna.metrics[0].cvssV3_0.baseScore}</span>
+                    {' '}({data.data.containers.cna.metrics[0].cvssV3_0.baseSeverity})
+                  </div>
+                )}
+
+                {data.data.containers?.cna?.affected && (
+                  <div className="text-gray-400 mt-4">
+                    <span className="text-gray-500 font-bold block mb-2">AFFECTED PRODUCTS:</span>
+                    <ul className="list-disc pl-4 space-y-2">
+                      {data.data.containers.cna.affected.map((a: any, i: number) => (
+                        <li key={i}>
+                          <span className="text-neon-green">{a.vendor}</span> {a.product}
+                          {a.versions && (
+                            <div className="text-gray-500 mt-1">
+                              Versions: {a.versions.map((v: any) => v.version).join(', ')}
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {data.data.containers?.cna?.references && (
+                  <div className="text-gray-400 mt-4">
+                    <span className="text-gray-500 font-bold block mb-2">REFERENCES:</span>
+                    <ul className="list-disc pl-4 space-y-1">
+                      {data.data.containers.cna.references.map((ref: any, i: number) => (
+                        <li key={i}>
+                          <a href={ref.url} target="_blank" rel="noreferrer" className="text-neon-green/80 hover:underline hover:text-neon-green break-all">
+                            {ref.url}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <button
+               onClick={() => setData(null)}
+               className="mt-4 text-xs text-gray-500 hover:text-white"
+            >
+               ← BACK TO RECENT / SEARCH
+            </button>
           </div>
         )}
       </div>
@@ -1070,6 +1197,7 @@ export function PhoneCrawlTool({ tool, onClose }: { tool: ToolDef, onClose: () =
       setError('Please enter a valid URL starting with http:// or https://');
       return;
     }
+    (document.activeElement as HTMLElement)?.blur();
     saveToHistory();
     setLoading(true);
     setError('');
@@ -1082,8 +1210,8 @@ export function PhoneCrawlTool({ tool, onClose }: { tool: ToolDef, onClose: () =
       
       if (!res.ok) throw new Error(data.error || 'Crawl failed.');
       
-      if (data.phones) {
-        setPhones(data.phones);
+      if (data.numbers) {
+        setPhones(data.numbers);
       } else {
         setPhones([]);
       }
@@ -1130,6 +1258,91 @@ export function PhoneCrawlTool({ tool, onClose }: { tool: ToolDef, onClose: () =
 }
 
 
+export function DnsTool({ tool, onClose }: { tool: ToolDef, onClose: () => void }) {
+  const { value: target, setValue: setTarget, handleKeyDown, saveToHistory } = useInputHistory('example.com');
+  const [server, setServer] = useState('default');
+  const [reverse, setReverse] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [output, setOutput] = useState('');
+
+  const servers = [
+    { label: 'System Default', ip: 'default' },
+    { label: 'Google (8.8.8.8)', ip: '8.8.8.8' },
+    { label: 'Cloudflare (1.1.1.1)', ip: '1.1.1.1' },
+    { label: 'Quad9 (9.9.9.9)', ip: '9.9.9.9' },
+    { label: 'OpenDNS (208.67.222.222)', ip: '208.67.222.222' }
+  ];
+
+  const fetchDns = async () => {
+    if (!target) return;
+    (document.activeElement as HTMLElement)?.blur();
+    saveToHistory();
+    setLoading(true);
+    setOutput('');
+    try {
+      const qs = new URLSearchParams({ target, server, reverse: reverse.toString() }).toString();
+      const backendUrl = (import.meta as any).env.VITE_BACKEND_URL || '';
+      const res = await fetch(`${backendUrl}/api/net/dns?${qs}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      setOutput(data.result);
+    } catch (e: any) {
+      setOutput(`Error: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <CustomToolLayout tool={tool} onClose={onClose}>
+      <div className="space-y-4 block">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            value={target}
+            onChange={e => setTarget(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="flex-1 bg-[#050505] border border-neon-green/20 focus:border-neon-green rounded-xl p-4 text-neon-green font-mono text-xs outline-none transition-all"
+            placeholder="target domain or IP..."
+          />
+          <button 
+            onClick={fetchDns}
+            disabled={loading || !target}
+            className={`flex-1 sm:flex-initial px-6 py-4 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${loading || !target ? 'bg-neon-green/5 text-neon-green/50 border border-neon-green/20 cursor-not-allowed' : 'bg-neon-green text-black hover:bg-neon-green hover:shadow-[0_0_15px_rgba(57,255,20,0.4)]'}`}
+          >
+            {loading ? 'QUERYING...' : 'RESOLVE'}
+          </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <select 
+            value={server}
+            onChange={e => setServer(e.target.value)}
+            className="flex-1 bg-[#050505] border border-neon-green/20 focus:border-neon-green rounded-xl p-3 text-neon-green font-mono text-xs outline-none transition-all appearance-none"
+          >
+            {servers.map(s => <option key={s.ip} value={s.ip}>{s.label}</option>)}
+          </select>
+
+          <button 
+            onClick={() => setReverse(r => !r)}
+            className={`px-4 py-3 border rounded-xl text-xs font-bold tracking-widest transition-all ${reverse ? 'bg-neon-green/10 border-neon-green text-neon-green' : 'border-neon-green/20 text-gray-400 hover:border-neon-green/50'}`}
+          >
+            REVERSE LOOKUP {reverse ? '(ON)' : '(OFF)'}
+          </button>
+        </div>
+
+        <div className="bg-[#050505] border border-neon-green/20 rounded-xl p-4 min-h-[200px] overflow-auto">
+          {output ? (
+            <pre className="text-neon-green/80 text-[10px] sm:text-xs font-mono whitespace-pre-wrap">{output}</pre>
+          ) : (
+             <div className="text-gray-500 text-xs text-center mt-10">ENTER A TARGET TO VIEW DNS RECORDS.</div>
+          )}
+        </div>
+      </div>
+    </CustomToolLayout>
+  );
+}
+
 export function CustomToolRouter({ tool, onClose }: { tool: ToolDef, onClose: () => void }) {
   switch (tool.id) {
     case 'qr_gen': return <QrGenTool tool={tool} onClose={onClose} />;
@@ -1146,6 +1359,7 @@ export function CustomToolRouter({ tool, onClose }: { tool: ToolDef, onClose: ()
     case 'nfc': return <NfcTool tool={tool} onClose={onClose} />;
     case 'cve': return <CveTool tool={tool} onClose={onClose} />;
     case 'phone_crawl': return <PhoneCrawlTool tool={tool} onClose={onClose} />;
+    case 'dns': return <DnsTool tool={tool} onClose={onClose} />;
     default: return null;
   }
 }

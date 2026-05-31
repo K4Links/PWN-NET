@@ -90,7 +90,7 @@ export default function App() {
 
         {activeTool && activeTool.id === 'dorks' ? (
           <DorksPage tool={activeTool} onClose={handleCloseTool} />
-        ) : activeTool && ['qr_gen', 'otp', 'passwords', 'speed', 'base64', 'cipher', 'security', 'notes', 'ip_calc', 'hackbar', 'device', 'nfc', 'cve', 'phone_crawl'].includes(activeTool.id) ? (
+        ) : activeTool && activeTool.actionType === 'custom' ? (
           <CustomToolRouter tool={activeTool} onClose={handleCloseTool} />
         ) : activeTool && (
           <TerminalEmulator 

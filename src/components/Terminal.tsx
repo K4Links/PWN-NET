@@ -235,6 +235,9 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
     if (!input.trim() || !tool) return;
 
     const activeToolId = tool.id;
+    if (activeToolId === 'web_faker') {
+       setOutput([]);
+    }
     const prompt = 'root@pwnux:~$';
     addOutput('input', `${prompt} ${input}`);
 
@@ -272,7 +275,7 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
     const runBackendTool = async (endpoint: string, params: Record<string, string>) => {
       const qs = new URLSearchParams(params).toString();
       // @ts-ignore - import.meta.env might not be fully typed in some setups
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://pwnnet-toolkit.onrender.com';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
       const res = await fetch(`${backendUrl}/api/net/${endpoint}?${qs}`);
       const data = await res.json();
       if (!res.ok) {
@@ -587,7 +590,11 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
         addOutput('system', `Directory scan: ${resolvedTarget}...`);
         try {
            const data = await runBackendTool('dirscan', { target: resolvedTarget });
-           data.result.split('\n').filter((l: string) => l.trim()).forEach((l: string) => addOutput('info', l));
+           if (data.results && data.results.length > 0) {
+              data.results.forEach((r: any) => addOutput('info', `[${r.status}] /${r.path}`));
+           } else {
+              addOutput('info', 'No common directories found.');
+           }
            addOutput('success', 'Scan complete.');
         } catch (e: any) { addOutput('error', e.message); }
       }
@@ -595,7 +602,23 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
         addOutput('system', `WP Scan: ${resolvedTarget}...`);
         try {
            const data = await runBackendTool('wpscan', { target: resolvedTarget });
-           data.result.split('\n').filter((l: string) => l.trim()).forEach((l: string) => addOutput('info', l));
+           if (!data.isWordPress) {
+              addOutput('info', 'WordPress NOT detected on this target.');
+           } else {
+              addOutput('success', 'WordPress DETECTED!');
+              if (data.version) addOutput('info', `Version: ${data.version}`);
+              if (data.plugins && data.plugins.length > 0) {
+                 addOutput('info', `Plugins found: ${data.plugins.join(', ')}`);
+              }
+              if (data.themes && data.themes.length > 0) {
+                 addOutput('info', `Themes found: ${data.themes.join(', ')}`);
+              }
+              if (data.endpoints) {
+                 for (const [ep, status] of Object.entries(data.endpoints)) {
+                    addOutput('info', `Endpoint: ${ep} (Status: ${status})`);
+                 }
+              }
+           }
            addOutput('success', 'Scan complete.');
         } catch (e: any) { addOutput('error', e.message); }
       }
@@ -603,7 +626,11 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
         addOutput('system', `React/Next Scan: ${resolvedTarget}...`);
         try {
            const data = await runBackendTool('reactscan', { target: resolvedTarget });
-           data.result.split('\n').filter((l: string) => l.trim()).forEach((l: string) => addOutput('info', l));
+           if (data.results && data.results.length > 0) {
+              data.results.forEach((r: any) => addOutput('info', `Found: [${r.status}] ${r.path}`));
+           } else {
+              addOutput('info', 'No React/Next specific paths found.');
+           }
            addOutput('success', 'Scan complete.');
         } catch (e: any) { addOutput('error', e.message); }
       }
@@ -618,15 +645,42 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
       else if (activeToolId === 'web_faker') {
         addOutput('system', `Generating fake identity...`);
         try {
-           const data = await runBackendTool('webfaker', {});
-           data.result.split('\n').filter((l: string) => l.trim()).forEach((l: string) => addOutput('info', l));
+           const id = parseInt(resolvedTarget) || Math.floor(Math.random() * 10000) + 1;
+           const backendUrl = (import.meta as any).env.VITE_BACKEND_URL || '';
+           const res = await fetch(`${backendUrl}/api/net/webfaker?id=${id}`);
+           if (!res.ok) throw new Error('Data generation failed');
+           const data = await res.json();
+           if (data.content) {
+             data.content.split('\n').filter((l: string) => l.trim()).forEach((l: string) => addOutput('info', l));
+           } else {
+             addOutput('error', 'No data returned.');
+           }
+        } catch (e: any) { addOutput('error', e.message); }
+      }
+      else if (activeToolId === 'smb') {
+        addOutput('system', `Auditing SMB on ${resolvedTarget}...`);
+        try {
+           const data = await runBackendTool('smb', { target: resolvedTarget });
+           if (data.result === 'open') {
+             addOutput('success', '[ALERT] Port 445 (SMB) is OPEN.');
+             addOutput('warning', 'Anonymous access might be enabled. Further manual testing recommended (e.g. smbclient).');
+           } else {
+             addOutput('info', 'Port 445 is Closed or Filtered. No exposed SMB detected.');
+           }
+           addOutput('success', 'SMB audit complete.');
         } catch (e: any) { addOutput('error', e.message); }
       }
       else if (activeToolId === 'shell') {
         addOutput('system', `Connecting to standard ports on ${resolvedTarget}...`);
         try {
            const data = await runBackendTool('shell', { target: resolvedTarget });
-           data.result.split('\n').filter((l: string) => l.trim()).forEach((l: string) => addOutput('info', l));
+           if (data.ssh?.open && data.ssh?.banner) addOutput('info', `SSH (22): ${data.ssh.banner}`);
+           else if (data.ssh?.open) addOutput('info', `SSH (22): Open (No banner)`);
+
+           if (data.ftp?.open && data.ftp?.banner) addOutput('info', `FTP (21): ${data.ftp.banner}`);
+           else if (data.ftp?.open) addOutput('info', `FTP (21): Open (No banner)`);
+
+           if (!data.ssh?.open && !data.ftp?.open) addOutput('info', 'No banners received/ports filtered on 22 or 21.');
            addOutput('success', 'Banner grab complete.');
         } catch (e: any) { addOutput('error', e.message); }
       }
@@ -683,17 +737,35 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
         } catch {}
       }
       else if (activeToolId === 'ip_host') {
-        addOutput('system', `Resolving IP and Host info for ${resolvedTarget}...`);
+        addOutput('system', `Resolving basic IP/Host info for ${resolvedTarget}...`);
         try {
           const geoData = await runBackendTool('geoip', { target: resolvedTarget }).catch(() => null);
-          if (geoData && geoData.country) {
-             addOutput('success', `Location: ${geoData.city}, ${geoData.region}, ${geoData.country} (${geoData.org})`);
+          let domains = resolvedTarget;
+          
+          if (/^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/.test(resolvedTarget)) {
+             try {
+                 const dnsData = await runBackendTool('dns', { target: resolvedTarget, reverse: 'true' });
+                 if (dnsData && dnsData.result) {
+                     const lines = dnsData.result.split('\n').filter((l: string) => l.trim() && l.includes('PTR'));
+                     if (lines.length > 0) {
+                         domains = lines.map((l: string) => l.split('\t').pop()).join(', ');
+                     }
+                 }
+             } catch {}
           }
-          const dnsData = await runBackendTool('dns', { target: resolvedTarget });
-          dnsData.result.split('\n').filter((l: string) => l.trim()).forEach((l: string) => addOutput('info', l));
-          const whoisData = await runBackendTool('whois', { target: resolvedTarget });
-          whoisData.result.split('\n').slice(0, 5).forEach((l: string) => addOutput('info', l));
-          addOutput('success', 'IP/Host resolution complete.');
+
+          if (geoData && geoData.geo && geoData.geo.query) {
+             addOutput('info', `IPv4 Address: ${geoData.geo.query}`);
+             addOutput('info', `Provider: ${geoData.geo.isp || geoData.geo.org || 'Unknown'}`);
+             addOutput('info', `Domain: ${domains}`);
+             addOutput('success', 'Basic resolution complete.');
+          } else if (geoData && geoData.targetIp) {
+             addOutput('info', `IPv4 Address: ${geoData.targetIp}`);
+             addOutput('info', `Domain: ${domains}`);
+             addOutput('success', 'Basic resolution complete. (Details unavailable)');
+          } else {
+             addOutput('error', 'Could not resolve target.');
+          }
         } catch (e: any) {
           addOutput('error', `Resolution failed: ${e.message}`);
         }
@@ -757,7 +829,6 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
     } catch (e: any) {
       addOutput('error', `Failed: ${e.message}`);
     } finally {
-      setTarget('');
       setIsRunning(false);
     }
   };
@@ -766,8 +837,11 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
     e.preventDefault();
     if (target.trim() && tool && !isRunning) {
       const input = target;
+      // Hide keyboard mobile
+      (document.activeElement as HTMLElement)?.blur();
+      if (inputRef.current) inputRef.current.blur();
+      
       saveToHistory(input);
-      setTarget('');
       handleRunTarget(input);
     }
   };
@@ -792,18 +866,19 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
     if (!requiresInput) return 'no input parameters needed';
     switch (id) {
       case 'pwnux': return 'type command...';
-      case 'http': case 'spider':
-        return 'enter url (e.g. https://example.com)';
-      case 'port_scan':
-        return 'enter ip address or domain';
-      case 'mac': return 'enter mac address';
-      case 'certs': case 'mail': case 'admin_finder': case 'dns':
+      case 'http': case 'spider': case 'admin_finder': case 'admin-finder': case 'dir_scan': case 'wp_scan': case 'react_scan':
+        return 'enter target url (e.g. https://example.com)';
+      case 'port_scan': case 'smb': case 'shell': case 'traceroute': case 'geo': case 'dos':
+        return 'enter ip address or domain (e.g. 192.168.1.1 or example.com)';
+      case 'mac': return 'enter mac address (e.g. 00:1A:2B:...)';
+      case 'certs': case 'mail': case 'dns': case 'dorks':
         return 'enter domain (e.g. example.com)';
       case 'pwned': return 'enter email address (e.g. example@gmail.com)';
       case 'vt': case 'ip_host': case 'blacklist': case 'whois': case 'ping':
         return 'enter domain or ip address';
       case 'net_scan': return 'enter network subnet or ip (e.g. 192.168.1.0/24)';
       case 'cve': return 'enter cve id (e.g. cve-2021-44228)';
+      case 'web_faker': return 'enter ID to generate (e.g. 5) or click RANDOM';
       default: return 'enter target...';
     }
   };
@@ -882,6 +957,19 @@ export function TerminalEmulator({ tool, onClose }: TerminalEmulatorProps) {
                 >
                   {isRunning ? 'EXECUTING...' : 'EXECUTE'}
                 </button>
+                {tool.id === 'web_faker' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                        const randomNum = Math.floor(Math.random() * 95 + 5).toString();
+                        setTarget(randomNum);
+                        handleRunTarget(randomNum);
+                    }}
+                    className="bg-neon-green/[0.05] hover:bg-neon-green text-neon-green hover:text-black border border-neon-green transition-all font-bold text-xs uppercase tracking-widest rounded-xl p-4 flex items-center justify-center active:scale-[0.98] sm:min-w-[100px]"
+                  >
+                    RANDOM
+                  </button>
+                )}
               </div>
             </form>
           )}
