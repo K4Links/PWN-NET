@@ -9,6 +9,7 @@ export const getBackendUrl = () => {
     }
   }
 
-  // If we are running on an Android app (APK), we need to point it to your deployed AI Studio backend url:
-  return 'https://ais-pre-wyyvit24ko355j5q5txewh-224473533913.us-west1.run.app';
+  // For the Android APK/Phone, we use your Render backend to avoid CORS restrictions
+  // Make sure your Render backend has the latest code deployed!
+  return 'https://pwnnet-toolkit.onrender.com';
 };
